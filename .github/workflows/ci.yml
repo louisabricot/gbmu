@@ -1,0 +1,53 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev
+
+env: 
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Run checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - nightly
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Update Ubuntu package lists
+        run: sudo apt update -y 
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+      - name: Run cargo tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all
