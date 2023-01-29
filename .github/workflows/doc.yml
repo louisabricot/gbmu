@@ -1,0 +1,39 @@
+name: Build & Deploy the documentation
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+env: 
+  CARGO_TERM_COLOR: always
+
+jobs:
+  deploy:
+    name: Run checks
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Update Ubuntu package lists
+        run: sudo apt update -y 
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Generate documentation
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps
+      - name: Create index.html
+        run: echo "<meta http-equiv=\"refresh\" content=\"0; url=gbmu\">" > ./target/doc/index.html 
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
