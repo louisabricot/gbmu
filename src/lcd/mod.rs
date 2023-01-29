@@ -10,16 +10,21 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
+/// LCD width
 const SCREEN_WIDTH: u32 = 166;
+/// LCD height
 const SCREEN_HEIGHT: u32 = 144;
 
+/// Ratio used to render the LCD window
 const PIXEL_SIZE: u32 = 4;
 
+/// Represent the Gameboy LCD window
 pub struct LCD {
     canvas: Canvas<Window>,
 }
 
 impl LCD {
+    /// Create a new LCD using the sdl_context given
     fn new(sdl_context: &Sdl) -> Self {
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
@@ -35,6 +40,7 @@ impl LCD {
         Self { canvas: canvas }
     }
 
+    /// Set a pixel at position (x, y) to a given color
     fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
         self.canvas.set_draw_color(color);
         self.canvas
@@ -47,14 +53,17 @@ impl LCD {
             .unwrap();
     }
 
+    /// Print the actual frame into the LCD window
     fn print_frame(&mut self) {
         self.canvas.present();
     }
 
+    /// Get width of the LCD screen
     fn get_width(&self) -> u32 {
         self.canvas.window().size().0 / PIXEL_SIZE
     }
 
+    /// Get height of the LCD screen
     fn get_height(&self) -> u32 {
         self.canvas.window().size().1 / PIXEL_SIZE
     }
