@@ -1,5 +1,7 @@
+mod lcd;
+
 fn main() {
-    println!("Hello, world!");
+	lcd::render();
 }
 
 #[cfg(test)]
