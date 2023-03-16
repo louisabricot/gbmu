@@ -1,5 +1,6 @@
 use std::env;
-use std::fs;
+use std::io::Cursor;
+use byteorder::{BigEndian, ReadBytesExt};
 
 mod hardware;
 use crate::hardware::cpu::Cpu;
@@ -14,10 +15,11 @@ fn main() {
     let file_path = &args[1];
     println!("Reading file: {}", file_path);
 
+    let mut rdr = Cursor::new();
     let content = fs::read(file_path).expect("Should have been able to read the file");
 
     let mut mycpu = Cpu::new(0);
-    let endpc = mycpu.run(content, 200);
+    let endpc = mycpu.run(content, 400);
     println!("{}", endpc);
 }
 
