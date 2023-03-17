@@ -1,9 +1,9 @@
 use std::env;
 use std::io::Cursor;
-use byteorder::{BigEndian, ReadBytesExt};
 
 mod hardware;
 use crate::hardware::cpu::Cpu;
+use crate::hardware::memory::Memory;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -15,12 +15,10 @@ fn main() {
     let file_path = &args[1];
     println!("Reading file: {}", file_path);
 
-    let mut rdr = Cursor::new();
+    let mut rdr = Cursor::new(0);
     let content = fs::read(file_path).expect("Should have been able to read the file");
 
-    let mut mycpu = Cpu::new(0);
-    let endpc = mycpu.run(content, 400);
-    println!("{}", endpc);
+    let mut mycpu = Cpu::new();
 }
 
 #[cfg(test)]
