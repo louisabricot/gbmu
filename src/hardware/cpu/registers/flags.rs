@@ -18,4 +18,3 @@ bitflags! {
         const CARRY = 0b0001_0000;
     }
 }
-

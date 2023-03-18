@@ -1,3 +1,3 @@
 pub struct Bootrom {
-    content     
+    content: u8,
 }

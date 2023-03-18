@@ -1,7 +1,6 @@
 pub struct Cartridge {
     //header
-    type: Type,
-
+    ctype: Type,
 }
 
 enum Type {

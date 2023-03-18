@@ -1,20 +1,20 @@
-use crate::hardware::cpu::registers::FlagsRegister;
+use crate::hardware::cpu::registers::flags::FlagsRegister;
 
 pub mod flags;
 
-/// Accumulator and auxiliary registers 
+/// Accumulator and auxiliary registers
 /// Accumulator register (A) is an 8-bit register for storing data and the result of arithmetic and
 /// logical operations
 /// Auxiliary registers (B, C, D, E, F, H and L) serve as auxiliary registers to the acculmulator
 pub struct Registers {
-    a: u8,
-    f: FlagsRegister,
-    b: u8,
-    c: u8,
-    d: u8,
-    e: u8,
-    h: u8,
-    l: u8,
+    pub a: u8,
+    pub f: FlagsRegister,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub h: u8,
+    pub l: u8,
 }
 
 pub enum Register8 {
@@ -25,7 +25,7 @@ pub enum Register8 {
     E,
     F,
     H,
-    L
+    L,
 }
 
 pub enum Register16 {
@@ -36,7 +36,6 @@ pub enum Register16 {
 }
 
 impl Registers {
-
     /// Initializes registers with value 0
     pub fn new() -> Self {
         Self {
@@ -63,21 +62,21 @@ impl Registers {
     }
 
     /// Writes the u16 value into the pair of registers represented by Register16
-    /// 
+    ///
     pub fn write16(&mut self, r16: Register16, value: u16) {
         match r16 {
             Register16::AF => {
                 self.a = (value >> 8) as u8;
                 self.f = FlagsRegister::from_bits_truncate(value as u8);
-            },
+            }
             Register16::BC => {
-                 self.b = (value >> 8) as u8;
+                self.b = (value >> 8) as u8;
                 self.c = value as u8;
-            },
+            }
             Register16::DE => {
                 self.d = (value >> 8) as u8;
                 self.e = value as u8;
-            },
+            }
             Register16::HL => {
                 self.h = (value >> 8) as u8;
                 self.l = value as u8;
