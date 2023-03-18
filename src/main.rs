@@ -1,7 +1,7 @@
-mod lcd;
+mod graphics;
 
 fn main() {
-    lcd::render();
+    graphics::render();
 }
 
 #[cfg(test)]
