@@ -3,12 +3,12 @@ extern crate sdl2;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::Canvas;
+use sdl2::rwops::RWops;
+use sdl2::ttf::Font;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
-use std::path::Path;
-
-const TTF_PATH: &str = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf";
+use std::include_bytes;
 
 const SPACE_SZ: u32 = 15;
 const BTN_HEIGHT: u32 = 35;
@@ -107,19 +107,13 @@ impl Debugger {
             "Speed".to_string(),
         ));
 
-        Self {
-            canvas: canvas,
-            buttons: buttons,
-        }
+        Self { canvas, buttons }
     }
 
     pub fn click(&self, x: i32, y: i32) -> Option<&Button> {
-        for button in &self.buttons {
-            if button.rect.contains_point(Point::new(x, y)) {
-                return Some(&button);
-            }
-        }
-        None
+        self.buttons
+            .iter()
+            .find(|&button| button.rect.contains_point(Point::new(x, y)))
     }
 
     /// Print the actual frame into the Debugger window
@@ -148,7 +142,7 @@ impl Button {
     fn new(x: i32, y: i32, width: u32, height: u32, text: String) -> Self {
         Self {
             rect: Rect::new(x, y, width, height),
-            text: text,
+            text,
         }
     }
 
@@ -159,8 +153,8 @@ impl Button {
         let texture_creator = canvas.texture_creator();
 
         // Load a font
-        let path: &Path = Path::new(&TTF_PATH);
-        let font = ttf_context.load_font(path, 64).unwrap();
+        let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
+        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 64)?;
 
         // render a surface, and convert it to a texture bound to the canvas
         let surface = font.render(self.text.as_str()).solid(Color::WHITE).unwrap();
@@ -169,8 +163,8 @@ impl Button {
             .unwrap();
 
         let target = Rect::new(
-            self.rect.x() as i32,
-            self.rect.y() as i32,
+            self.rect.x(),
+            self.rect.y(),
             self.rect.width(),
             self.rect.height(),
         );

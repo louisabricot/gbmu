@@ -10,11 +10,11 @@ mod debugger;
 mod lcd;
 
 use debugger::Debugger;
-use lcd::LCD;
+use lcd::Lcd;
 
 pub fn render() {
     let sdl_context = sdl2::init().unwrap();
-    let mut lcd = LCD::new(&sdl_context);
+    let mut lcd = Lcd::new(&sdl_context);
     let mut debugger = Debugger::new(&sdl_context);
 
     let mut x: u32 = 0;
@@ -46,9 +46,8 @@ pub fn render() {
                     window_id, x, y, ..
                 } => {
                     if debugger.get_window_id() == window_id {
-                        match debugger.click(x, y) {
-                            Some(button) => button.action(),
-                            None => (),
+                        if let Some(button) = debugger.click(x, y) {
+                            button.action()
                         }
                     }
                 }

@@ -15,11 +15,11 @@ const SCREEN_HEIGHT: u32 = 144;
 const PIXEL_SIZE: u32 = 4;
 
 /// Represent the Gameboy LCD window
-pub struct LCD {
+pub struct Lcd {
     canvas: Canvas<Window>,
 }
 
-impl LCD {
+impl Lcd {
     /// Create a new LCD using the sdl_context given
     pub fn new(sdl_context: &Sdl) -> Self {
         let video_subsystem = sdl_context.video().unwrap();
@@ -33,7 +33,7 @@ impl LCD {
             .build()
             .unwrap();
         let canvas = window.into_canvas().build().unwrap();
-        Self { canvas: canvas }
+        Self { canvas }
     }
 
     /// Set a pixel at position (x, y) to a given color

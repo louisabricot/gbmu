@@ -26,6 +26,8 @@ jobs:
         run: sudo apt update -y 
       - name: Install sdl2 dependencies
         run: sudo apt install libsdl2-dev libsdl2-ttf-dev
+      - name: Install unzip
+        run: sudo apt install unzip
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -33,6 +35,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
+      - name: Add asset file
+        run: curl -L https://dl.dafont.com/dl/?f=early_gameboy --output gameboy.zip &&
+             unzip -p gameboy.zip > assets/gameboy.ttf
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
