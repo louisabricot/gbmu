@@ -3,6 +3,7 @@ use bitflags::bitflags;
 bitflags! {
     /// Consists of 4 flags that are set and reset according to the results of instruction
     /// execution
+    #[derive(Debug)]
     pub struct FlagsRegister: u8 {
 
         /// Set to 1 when the result of an operation is 0; otherwise reset

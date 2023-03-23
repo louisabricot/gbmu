@@ -3,6 +3,7 @@ use std::fs;
 
 mod hardware;
 use crate::hardware::cpu::Cpu;
+use crate::hardware::memory::Memory;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,7 +17,9 @@ fn main() {
 
     let _content = fs::read(file_path).expect("Should have been able to read the file");
 
-    let _mycpu = Cpu::new();
+    let mut _memory = Memory::new(_content);
+    let mut _mycpu = Cpu::new(_memory);
+    _mycpu.step();
 }
 
 #[cfg(test)]

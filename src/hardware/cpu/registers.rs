@@ -6,6 +6,8 @@ pub mod flags;
 /// Accumulator register (A) is an 8-bit register for storing data and the result of arithmetic and
 /// logical operations
 /// Auxiliary registers (B, C, D, E, F, H and L) serve as auxiliary registers to the acculmulator
+
+#[derive(Debug)]
 pub struct Registers {
     pub a: u8,
     pub f: FlagsRegister,
@@ -17,6 +19,7 @@ pub struct Registers {
     pub l: u8,
 }
 
+#[derive(Debug)]
 pub enum Register8 {
     A,
     B,
@@ -28,6 +31,7 @@ pub enum Register8 {
     L,
 }
 
+#[derive(Debug)]
 pub enum Register16 {
     AF,
     BC,

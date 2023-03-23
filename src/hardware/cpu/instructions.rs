@@ -106,9 +106,41 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
     ),
 ];
 
+pub enum From {
+    HL,
+    BC,
+    DE,
+    Imm16,
+    C,
+}
+pub enum Destination {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    Address(From),
+}
+
+pub enum Source {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    Imm8,
+    Address(From),
+}
+Load(Destination, Source)
 pub enum Operation {
     //8-bit transfer and Input/Output instructions
     Load(Register8, Register8),
+    Load(Register8, Imm8)
+
     /// 16-bit load instructions
 
         /// Loads 2 bytes of immediate data to Register16
@@ -215,4 +247,11 @@ pub enum Opcode {
     LD_A_E,
     LD_A_H,
     LD_A_L,
+    LD_A_HL,
+    LD_B_imm8,
+    LD_C_imm8,
+    LD_D_imm8,
+    LD_E_imm8,
+    LD_H_imm8,
+    LD_L_imm8,
 }
