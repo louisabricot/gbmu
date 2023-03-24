@@ -381,6 +381,42 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Operation::Inc(Register8::H),
         Clock::Four,
     ),
+    Instruction::new(
+        Opcode::DEC_H,
+        "DEC H",
+        Operation::Dec(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::LD_H_d8,
+        "LD H, d8",
+        Operation::Load(Register8::H, Imm8),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::DDA,
+        "DDA",
+        Operation::Dda,
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::JR_Z_r8,
+        "JR Z, r8",
+        Operation::Jr(Conditional::Z, Imm8),
+        Clock::Conditional,
+    ),
+    Instruction::new(
+        Opcode::ADD_HL_HL,
+        "ADD HL, HL"
+        Operation::Add(Register16::HL, Register16::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::LDI_A_HL,
+        "LD A, (HL+)",
+        Operation::LoadI(Register8::A, Address::HL),
+        Clock::Eight,
+    ),
 ];
 
 pub enum Address {
