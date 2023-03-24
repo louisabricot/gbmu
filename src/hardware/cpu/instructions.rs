@@ -31,7 +31,7 @@ pub enum Flags {
 
 /// Enumerates the instructions speed in clock cycle
 pub enum Clock {
-    Conditional,
+    Condition,
     None,
     Four,
     Eight,
@@ -259,7 +259,7 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Opcode::JR_NZ_r8,
         "JR NZ, r8",
         Operation::Jr(Condition::NZ, Imm8),
-        Clock::Conditional, //12/8 depending on the condition
+        Clock::Condition, //12/8 depending on the condition
     ),
     Instruction::new(
         Opcode::LD_HL_d16,
@@ -306,8 +306,8 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
     Instruction::new(
         Opcode::JR_Z_r8,
         "JR Z, r8",
-        Operation::Jr(Conditional::Z, Imm8),
-        Clock::Conditional, // 12/8
+        Operation::Jr(Condition::Z, Imm8),
+        Clock::Condition, // 12/8
     ),
     Instruction::new(
         Opcode::ADD_HL_HL,
@@ -354,8 +354,8 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
     Instruction::new(
         Opcode::JR_NC_r8,
         "JR NC, r8",
-        Operation::Jr(Conditional::NC, Imm8),
-        Clock::Conditional, // 12/8
+        Operation::Jr(Condition::NC, Imm8),
+        Clock::Condition, // 12/8
     ),
     Instruction::new(
         Opcode::LD_SP_d16,
@@ -402,8 +402,8 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
     Instruction::new(
         Opcode::JR_Z_r8,
         "JR Z, r8",
-        Operation::Jr(Conditional::Z, Imm8),
-        Clock::Conditional,
+        Operation::Jr(Condition::Z, Imm8),
+        Clock::Condition,
     ),
     Instruction::new(
         Opcode::ADD_HL_HL,
@@ -450,8 +450,8 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
     Instruction::new(
         Opcode::JR_NC_r8,
         "JR NC, r8",
-        Operation::Jr(Conditional::NC, Imm8),
-        Clock::Conditional,
+        Operation::Jr(Condition::NC, Imm8),
+        Clock::Condition,
     ),
     Instruction::new(
         Opcode::LD_SP_d16,
@@ -498,8 +498,8 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
     Instruction::new(
         Opcode::JR_C_r8,
         "JR C, d8",
-        Operation::Jr(Conditional::C, Imm8),
-        Clock::Conditional,
+        Operation::Jr(Condition::C, Imm8),
+        Clock::Condition,
     ),
     Instruction::new(
         Opcode::ADD_HL_SP,
@@ -928,6 +928,408 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Operation::Load(Register8::A, Register8::A),
         Clock::Four,
     ),
+    Instruction::new(
+        Opcode::ADD_A_B,
+        "ADD A, B",
+        Operation::Add(Register8::A, Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_C,
+        "ADD A, C",
+        Operation::Add(Register8::A, Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_D,
+        "ADD A, D",
+        Operation::Add(Register8::A, Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_E,
+        "ADD A, E",
+        Operation::Add(Register8::A, Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_H,
+        "ADD A, H",
+        Operation::Add(Register8::A, Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_L,
+        "ADD A, L",
+        Operation::Add(Register8::A, Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_HL,
+        "ADD A, (HL)",
+        Operation::Add(Register8::A, Address::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::ADD_A_A,
+        "ADD A, A",
+        Operation::Add(Register8::A, Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_B,
+        "ADC A, B",
+        Operation::Adc(Register8::A, Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_C,
+        "ADC A, C",
+        Operation::Adc(Register8::A, Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_D,
+        "ADC A, D",
+        Operation::Adc(Register8::A, Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_E,
+        "ADC A, E",
+        Operation::Adc(Register8::A, Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_H,
+        "ADC A, H",
+        Operation::Adc(Register8::A, Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_L,
+        "ADC A, L",
+        Operation::Adc(Register8::A, Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_HL,
+        "ADC A, (HL)",
+        Operation::Adc(Register8::A, Address::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::ADC_A_A,
+        "ADC A, A",
+        Operation::Adc(Register8::A, Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_B,
+        "SUB B",
+        Operation::Sub(Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_C,
+        "SUB C",
+        Operation::Sub(Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_D,
+        "SUB D",
+        Operation::Sub(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_E,
+        "SUB E",
+        Operation::Sub(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_H,
+        "SUB H",
+        Operation::Sub(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_L,
+        "SUB L",
+        Operation::Sub(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SUB_HL,
+        "SUB (HL)",
+        Operation::Sub(Address::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::SUB_A,
+        "SUB A",
+        Operation::Sub(Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_A_B,
+        "SBC A, B",
+        Operation::Sbc(Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_A_C,
+        "SBC A, C",
+        Operation::Sbc(Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_A_D,
+        "SBC A, D",
+        Operation::Sbc(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_E,
+        "SBC A, E",
+        Operation::Sbc(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_H,
+        "SBC A, H",
+        Operation::Sbc(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_L,
+        "SBC A, L",
+        Operation::Sbc(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::SBC_A_HL,
+        "SBC A, (HL)",
+        Operation::Sbc(Address::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::SBC_A_A,
+        "SBC A, A",
+        Operation::Sbc(Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_B,
+        "AND B",
+        Operation::And(Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_C,
+        "AND C",
+        Operation::And(Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_D,
+        "AND D",
+        Operation::And(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_E,
+        "AND E",
+        Operation::And(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_H,
+        "AND H",
+        Operation::And(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_L,
+        "AND L",
+        Operation::And(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::AND_HL,
+        "AND (HL)",
+        Operation::And(Address::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::AND_A,
+        "AND A",
+        Operation::And(Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_B,
+        "XOR B",
+        Operation::Xor(Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_C,
+        "XOR C",
+        Operation::Xor(Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_D,
+        "XOR D",
+        Operation::Xor(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_E,
+        "XOR E",
+        Operation::Xor(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_H,
+        "XOR H",
+        Operation::Xor(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_L,
+        "XOR L",
+        Operation::Xor(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::XOR_HL,
+        "XOR (HL)",
+        Operation::Xor(Adress::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::XOR_A,
+        "XOR A",
+        Operation::Xor(Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_B,
+        "OR B",
+        Operation::Or(Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_C,
+        "OR C",
+        Operation::Or(Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_D,
+        "OR D",
+        Operation::Or(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_E,
+        "OR E",
+        Operation::Or(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_H,
+        "OR H",
+        Operation::Or(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_L,
+        "OR L",
+        Operation::Or(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::OR_HL,
+        "OR (HL)",
+        Operation::Or(Adress::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::OR_A,
+        "OR A",
+        Operation::Or(Register8::A),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_B,
+        "CP B",
+        Operation::Cp(Register8::B),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_C,
+        "CP C",
+        Operation::Cp(Register8::C),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_D,
+        "CP D",
+        Operation::Cp(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_E,
+        "CP E",
+        Operation::Cp(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_H,
+        "CP H",
+        Operation::Cp(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_L,
+        "CP L",
+        Operation::Cp(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::CP_HL,
+        "CP (HL)",
+        Operation::Cp(Address::HL),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::RET_NZ,
+        "RET NZ",
+        Operation::Ret(Condition::NZ),
+        Clock::Condition,
+    ),
+    Instruction::new(
+        Opcode::POP_BC,
+        "POP BC",
+        Operation::Pop(Register16::BC),
+        Clock::Twelve,
+    ),
+    Instruction::new(
+        Opcode::JP_NZ_a16,
+        "JP NZ, a16",
+        Operation::Jp(Condition::NZ, Imm16),
+        Clock::Condition,
+    ),
+    Instruction::new(
+        Opcode::JP_a16,
+        "JP a16",
+        Operation::Jp(Imm16),
+        Clock::Sixteen,
+    ),
 ];
 
 pub enum Address {
@@ -1137,21 +1539,21 @@ pub enum Operation {
     /// Unconditional jump to the absolute address specified by the 16-bit operand
     Jp(Address),
 
-    /// Conditional jump to the absolute address specified by the 16-bit operand, depending on the
+    /// Condition jump to the absolute address specified by the 16-bit operand, depending on the
     /// condition. Note that the operand (absolute address) is read even when condition is false.
     Jp(Condition, Imm16),
 
     /// Unconditional jump to the relative address specified by the signed 8-bit operand
     Jr(Imm8),
 
-    /// Conditional jump to the relative address specified by the signed 8-bit operand, adepending
+    /// Condition jump to the relative address specified by the signed 8-bit operand, adepending
     /// on the condition
     Jr(Condition, Imm8),
 
     /// Unconditional function call to the absolute address specified b the 16-bit operand
     Call(Imm16),
 
-    /// Conditional function call to the absolute address specified by the 16-bit operand,
+    /// Condition function call to the absolute address specified by the 16-bit operand,
     /// depending on the condition
     /// Note that the operand (absolute address) is read even when the condition is false!
     Call(Condition, Imm16),
