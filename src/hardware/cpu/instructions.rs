@@ -2,35 +2,37 @@
 
 /// Represents both 8-bit and 16-bit instructions
 pub struct Instruction {
+
     /// The portion of the instruction specifying the operation to perform. In the case of
     pub opcode: Opcode,
 
     /// A string that represents the instruction eg LD A (BC)
     pub mnemonic: &'static str,
 
-    // / The operation to perform
-    // pub operation: Operation,
+    /// The operation to perform
+    pub operation: Operation,
+    
     /// The number of clock cycle
     pub clock_cycle: Clock,
+    
     // /The flags affected by the instruction
     //flags: Flags,
 }
 
-/*pub enum Flags {
+pub enum Flags {
     ZERO,
     SUBTRACT,
     HALFCARRY,
     CARRY,
     NOT_AFFECTED,
     RESET,
-}*/
-
-pub enum Addr {
-    IMM8,
 }
+
 
 /// Enumerates the instructions speed in clock cycle
 pub enum Clock {
+    Conditional,
+    None,
     Four,
     Eight,
     Twelve,
@@ -39,7 +41,6 @@ pub enum Clock {
     ThirtyTwo,
 }
 
-/*
 impl Instruction {
     /// ...
     pub fn new(opcode: Opcode, mnemonic: &str, operation: Operation, clock_cycle: Clock) -> Self {
@@ -51,194 +52,598 @@ impl Instruction {
         }
     }
 
-    pub fn get(opcode: Opcode) -> &'static Instruction {
+    pub fn getByOpcode(opcode: Opcode) -> Option<&'static Instruction> {
         for instruction in INSTRUCTIONS {
             if instruction.opcode == opcode {
-                return instruction
+                return &instruction
             }
         }
-        return &INSTRUCTIONS[0]
+        None 
     }
 }
 
 static INSTRUCTIONS: &'static [Instruction; 7] = &[
     Instruction::new(
-        Opcode::LD_A_A,
-        "LD A, A",
-        Operation::Load(Register8::A, Register8::A),
+        Opcode::NOP,
+        "NOP",
+        Operation::NOP,
         Clock::Four,
     ),
     Instruction::new(
-        Opcode::LD_A_B,
-        "LD A, B",
-        Operation::Load(Register8::A, Register8::B),
+        Opcode::LD_BC_d16,
+        "LD B, d16",
+        Operation::Load(Register16::BC, Imm16),
+        Clock::Twelve,
+    ),
+    Instruction::new(
+        Opcode::LD_BC_A,
+        "LD (BC), A",
+        Operation::Load(Address::BC, Register8::A),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_BC,
+        "INC B",
+        Operation::Inc(Register16::BC),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_B,
+        "INC B",
+        Operation::Inc(Register8::B),
         Clock::Four,
     ),
     Instruction::new(
-        Opcode::LD_A_C,
-        "LD A, C",
-        Operation::Load(Register8::A, Register8::C),
+        Opcode::DEC_B,
+        "DEC B",
+        Operation::Dec(Register8::B),
         Clock::Four,
     ),
     Instruction::new(
-        Opcode::LD_A_D,
-        "LD A, D",
-        Operation::Load(Register8::A, Register8::D),
+        Opcode::LD_B_d8,
+        "LD B, d8",
+        Operation::Load(Register8::B, Imm8),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::RLCA,
+        "RLCA",
+        Operation::Rlca,
         Clock::Four,
     ),
     Instruction::new(
-        Opcode::LD_A_E,
-        "LD A, E",
-        Operation::Load(Register8::A, Register8::E),
+        Opcode::LD_a16_SP,
+        "LD (a16), SP",
+        Operation::Load(Address::Imm16, Register16::SP),
+        Clock::Twenty,
+    ),
+    Instruction::new(
+        Opcode::ADD_HL_BC,
+        "ADD HL, BC",
+        Operation::Add(Register16::HL, Register16::BC),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::LD_A_BC,
+        "LD A, (BC)",
+        Operation::Load(Register8::A, Address::BC),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::DEC_BC,
+        "DEC BC",
+        Operation::Dec(Register16::BC),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_C,
+        "INC C",
+        Operation::Inc(Register8::C),
         Clock::Four,
     ),
     Instruction::new(
-        Opcode::LD_A_H,
-        "LD A, H",
-        Operation::Load(Register8::A, Register8::H),
+        Opcode::DEC_C,
+        "DEC C",
+        Operation::Dec(Register8::C),
         Clock::Four,
     ),
     Instruction::new(
-        Opcode::LD_A_L,
-        "LD A, L",
-        Operation::Load(Register8::A, Register8::L),
+        Opcode::LD_C_d8,
+        "LD C, d8",
+        Operation::Load(Register8::C, Imm8),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::RRCA,
+        "RRCA",
+        Operation::Rrca,
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::STOP,
+        "STOP",
+        Operation::Stop,
+        Clock::None, //pas compris 4 ? 8?
+    ),
+    Instruction::new(
+        Opcode::LD_DE_d16,
+        "LD DE, d16",
+        Operation::Load(Register16::DE, Imm16),
+        Clock::Twelve,
+    ),
+    Instruction::new(
+        Opcode::LD_DE_A,
+        "LD (DE), A",
+        Operation::Load(Address::DE, Register8::A),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_DE,
+        "INC DE",
+        Operation::Inc(Register16::DE),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_D,
+        "INC D",
+        Operation::Inc(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::DEC_D,
+        "DEC D",
+        Operation::Dec(Register8::D),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::LD_D_d8,
+        "LD D, d8",
+        Operation::Load(Register::D, Imm8)
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::RLA,
+        "RLA",
+        Operation::Rla,
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::JR_r8,
+        "JR r8",
+        Operation::Jr(Imm8),
+        Clock::Twelve,
+    ),
+    Instruction::new(
+        Opcode::ADD_HL_DE,
+        "ADD HL, DE",
+        Operation::Add(Register16::HL, Register16::DE),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::LD_A_DE,
+        "LD A, (DE)",
+        Operation::Load(Register8::A, Address::DE),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::DEC_DE,
+        "DEC DE",
+        Operation::Dec(Register16::DE),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_E,
+        "INC E",
+        Operation::Inc(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::DEC_E,
+        "DEC E",
+        Operation::Dec(Register8::E),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::LD_E_d8,
+        "LD E, d8",
+        Operation::Load(Register8::E, Imm8),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::RRA,
+        "RRA",
+        Operation::Rra,
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::JR_NZ_r8,
+        "JR NZ, r8",
+        Operation::Jr(Condition::NZ, Imm8),
+        Clock::Conditional, //12/8 depending on the condition
+    ),
+    Instruction::new(
+        Opcode::LD_HL_d16,
+        "LD HL, d16",
+        Operation::Load(Register16::HL, Imm16),
+        Clock::Twelve,
+    ),
+    Instruction::new(
+        Opcode::LDI_HL_A,
+        "LD (HL+), A",
+        Operation::LoadI(Adress::HL, Register8::A),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_HL,
+        "INC HL",
+        Operation::Inc(Register16::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_H,
+        "INC H",
+        Operation::Inc(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::DEC_H,
+        "DEC H",
+        Operation::Dec(Register8::H),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::LD_H_d8,
+        "LD H, d8",
+        Operation::Load(Register8::H, Imm8),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::DAA,
+        "DAA",
+        Operation::Daa,
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::JR_Z_r8,
+        "JR Z, r8",
+        Operation::Jr(Conditional::Z, Imm8),
+        Clock::Conditional, // 12/8
+    ),
+    Instruction::new(
+        Opcode::ADD_HL_HL,
+        "ADD HL, HL",
+        Operation::Add(Register16::HL, Register16::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::LDI_A_HL,
+        "LD A, (HL+)",
+        Operation::LoadI(Register8::A, Address::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::DEC_HL,
+        "DEC HL",
+        Operation::Dec(Register16::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_L,
+        "INC L",
+        Operation::Inc(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::DEC_L,
+        "DEC L",
+        Operation::Dec(Register8::L),
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::LD_L_d8,
+        "LD L, d8",
+        Operation::Load(Register8::L. Imm8),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::CPL,
+        "CPL",
+        Operation::Cpl,
+        Clock::Four,
+    ),
+    Instruction::new(
+        Opcode::JR_NC_r8,
+        "JR NC, r8",
+        Operation::Jr(Conditional::NC, Imm8),
+        Clock::Conditional, // 12/8
+    ),
+    Instruction::new(
+        Opcode::LD_SP_d16,
+        "LD SP, d16",
+        Operation::Load(Register16::SP, Imm16),
+        Clock::Twelve,
+    ),
+    Instruction::new(
+        Opcode::LDI_HL_A,
+        "LD (HL+), A",
+        Operation::LoadI(Address::HL, Register8::A),
+        Clock::Eight, 
+    ),
+    Instruction::new(
+        Opcode::INC_HL,
+        "INC HL",
+        Operation::Inc(Register16::HL),
+        Clock::Eight,
+    ),
+    Instruction::new(
+        Opcode::INC_H,
+        "INC H",
+        Operation::Inc(Register8::H),
         Clock::Four,
     ),
 ];
 
-pub enum From {
+pub enum Address {
     HL,
     BC,
     DE,
     Imm16,
     C,
-}
-pub enum Destination {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    Address(From),
+    Imm8,
 }
 
-pub enum Source {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    Imm8,
-    Address(From),
-}
-Load(Destination, Source)
 pub enum Operation {
-    //8-bit transfer and Input/Output instructions
+
+    /// 8-bit load instructions
+    
+    /// Loads to the left-hand 8-bit register, data from the right-hand 8-bit register 
     Load(Register8, Register8),
-    Load(Register8, Imm8)
+
+    /// Loads to the 8-bit register, the immediate 8-bit data
+    Load(Register8, Imm8),
+
+    /// Loads to the 8-bit register, data from the absolute address
+    Load(Register8, Address),
+
+    /// Loads to the absolute address, data from the 8-bit register
+    Load(Address, Register8),
+
+    /// Loads to the absolute address, the immediate 8-bit data
+    Load(Address, Imm8),
+
+    /// Loads to the 8-bit register, data from the address. The full 16-bit absolute address is
+    /// obtained by setting the most significant byte to 0xFF and the least significant byte to the
+    /// value . So the possible range is 0xFF00- 0xFFFF.
+    LoadH(Register8, Address),
+
+    /// Loads to the address specified by the indirect, data from the 8-bit register. The full
+    /// 16-bit absolute address is obtained by setting the most significant byte to 0xFF and the
+    /// least significant byte to the value of Address, so the possible range is 0xFF00 - 0xFFFF.
+    LoadH(Address, Register8),
+
+    /// Loads to the absolute address specified by the 16-bit register, data from the 8-bit register. The value of the register is decremented after the memory write.
+    LoadD(Address, Register8),
+
+    
+    /// Loads to the 8-bit register, data from the absolute address specified by the 16-bit register. The value of the register is decremented after the memory write.
+    LoadD(Register8, Address),
+
+    
+    /// Loads to the absolute address specified by the 16-bit register, data from the 8-bit register. The value of the register is incremented after the memory write.
+    LoadI(Address, Register8),
+
+    
+    /// Loads to the 8-bit register, data from the absolute address specified by the 16-bit register. The value of the register is incremented after the memory write.
+    LoadI(Register8, Address),
 
     /// 16-bit load instructions
 
-        /// Loads 2 bytes of immediate data to Register16
-        LoadImm16(Register16),
+    /// Loads to the 16-bit register, the immeidate 16-bit data
+    Load(Register16, Imm16),
 
-        /// Loads the content of Register16 in SP
-        LoadSP(Register16),
+    /// Loads to the absolute address specified by the 16-bit operand, data from the 16-bit
+    /// register
+    Load(Address, Register16),
 
-        /// Pushes the content of Register16 onto the memory stack
-        Push(Register16),
+    /// Loads to the left-hand 16-bit register, data from the right-hand 16-bit register
+    Load(Register16, Register16),
 
-        /// Pops the content from the memory stack and into Register16
-        Pop(Register16),
+    /// Pushes to the stack memory, data from the 16-bit register
+    Push(Register16),
 
-        /// Stores the sum of SP + 1 byte of immediate data to HL register
-        LoadHL(Imm8),
+    /// Pops to the 16-bit register, data from the stack memory
+    Pop(Register16),
 
-        /// Stores the lower byte of SP at Address specified by 2 bytes of immediate data and the upper
-        /// byte of SP at address nn + 1
-        LoadSP(Address(Imm16)),
+    /// 8-bit arithmetic and logical instructions
+    
+    /// Adds to the 8-bit register A, the 8-bit register and stores the  
+    Add(Register8),
 
-    /// 8-bit Arithmetic and Logical Operation Instructions
+    /// Adds to the 8-bit register A, data from the absolute address specified by the 16-bit
+    /// register, and stores the result bakc into register A
+    Add(Address),
 
-        /// Add the contents of Register8 to Register8::A and stores the result in register A
-        Add(Register8),
+    /// Adds to the 8-bit register A, the immediata 8-bit data and stores the result back into
+    /// register A
+    Add(Imm8),
 
-        /// Add one byte of immediate data to the contents of register A and stores the result in register A
-        Add(Imm8),
+    /// Adds to the 8-bit register A, the carry flag and the 8-bit register, and stores the result
+    /// back into register A
+    Adc(Register8),
 
-        /// Add the content of memory specified by the contents of register16 to the contents of
-        /// register A and stores the result in register A
-        Add(Address(Register16)),
+    /// Adds to the 8-bit register A, the carry flag and data from the absolute address specified
+    /// by the 16-bit register and stores the result back into register A
+    Adc(Address),
 
-        /// ????
-        Adc(Imm8),
+    /// Adds to the 8-bit register A, the carry flag and the immediate data, and stores the result
+    /// back into register A
+    Adc(Imm8),
 
-        /// ????
-        Adc(Register8),
+    /// Substracts from the 8-bit register A, the 8-bit register, and stores the result back into
+    /// register A
+    Sub(Register8),
 
-        /// ????
-        Adc(Address(Register16)),
+    /// Substracts from the 8-bit register A, data from the absolute address specified by the
+    /// 16-bit register and stores the result back into register A
+    Sub(Address),
 
-        Adc(Imm8),
+    /// Substracts from the 8-bit register A, the immediate data and stores the result back into
+    /// register A
+    Sub(Imm8),
+
+    /// Substracts from the 8-bit register A, the carry flag and 8-bit register, and stores the
+    /// result back into register A
+    Sbc(Register8),
+
+    /// Substracts from the 8-bit register A, the carry flag and data from the absolute address
+    /// specified by the 16-bit register and stores the result back into register A
+    Sbc(Address),
+
+    /// Substracts from the 8-bit register A, the carry flag and the immediate 8-bit data, and
+    /// stores the result back into register A.
+    Sbc(Imm8),
+
+    /// Substracts from the 8-bit register A, the 8-bit register and updates flags based on the
+    /// result. This instruction is identical to SUB r but does not update register A
+    Cp(Register8),
+
+    /// Substracts from the 8-bit registe A, data from the absolute address specified by the 16-bit
+    /// register, and updates flags based on the result. This instruction is identifical to SUB
+    /// addr but does not udpate register A
+    Cp(Address),
+
+    /// Substracts from the 8-bit register A, the immediate data and updates flags based on the
+    /// result. This instruction is identifical to SUB n but does not update register A.
+    Cp(Imm8),
+
+    /// Increments data in the 8-bit register
+    Inc(Register8),
+
+    /// Increments data at the absolute address specified by the 16-bit register
+    Inc(Address),
+
+    /// Decrements data in the 8-bit register
+    Dec(Register8),
+
+    /// Decrements data at the absolute address specified by the 16-bit register
+    Dec(Address),
+
+    /// Performs a bitwise AND operation between the 8-bit register A and the 8-bit register, and
+    /// stores the result into register A
+    And(Register8),
+
+    
+    /// Performs a bitwise AND operation between the 8-bit register A and data from the absolute
+    /// address specified by the 16-bit register, and
+    /// stores the rsult back into register A
+    And(Address),
+
+    /// Performs a bitwise AND operation between the 8-bit register A and the immediate value, and
+    /// stores the result back into register A
+    And(Imm8),
+
+    /// Performs a bitwise OR operation between 8-bit register A and the 8-bit register, and stores
+    /// the result back into register A
+    Or(Register8),
+    
+    /// Performs a bitwise OR operation between the 8-bit register A and the immediate value, and
+    /// stores the result back into register A
+    Or(Imm8),
+
+    /// Performs a bitwise OR operation between the 8-bit register A and data from the absolute
+    /// address specified by the 16-bit register, and
+    /// stores the rsult back into register A
+    Or(Address),
+    
+    /// Performs a bitwise XOR operation between 8-bit register A and the 8-bit register, and stores
+    /// the result back into register A
+    Xor(Register8),
+    
+    /// Performs a bitwise XOR operation between the 8-bit register A and the immediate value, and
+    /// stores the result back into register A
+    Xor(Imm8),
+
+    /// Performs a bitwise XOR operation between the 8-bit register A and data from the absolute
+    /// address specified by the 16-bit register, and
+    /// stores the rsult back into register A
+    Xor(Address),
+
+    /// Flips the carry flag, and clears the N and H flags
+    Ccf,
+
+    /// Sets the carry flags, and clears the N and H flags
+    Scf,
+
+    /// Decimal Adjust Accumulator
+    /// TODO: describe operation
+    Daa,
+
+    /// Flops all the bits in the 8-bit register A and set s the N and H flags
+    Cpl,
+
+    /// TODO: 16-bit arithmetic instructions
+    /// TODO: Rotate, shift and bit operation instructions
 
 
-        /// Substracts the contents of Register8 from the contents of register A and store the results
-        /// in register A
-        Sub(Register8),
+    /// Control flow instructions
+    
+    /// Unconditional jump to the absolute address specified by the 16-bit operand
+    Jp(Address),
 
-        /// Substracts one byte of immediate data to the contents of register A and stores the result
-        /// to register A
-        Sub(Imm8),
+    /// Conditional jump to the absolute address specified by the 16-bit operand, depending on the
+    /// condition. Note that the operand (absolute address) is read even when condition is false.
+    Jp(Condition, Imm16),
 
-        /// Substracts the content of memory specified by the contents of register16 to the contents of
-        /// register A and stores the result to register A
-        Sub(Address(Register16)),
+    /// Unconditional jump to the relative address specified by the signed 8-bit operand
+    Jr(Imm8),
 
-        /// Substracts the contents of Register8 and CY from the contents of register A and stores the
-        /// result to register A
-        Sbc(Register8),
+    /// Conditional jump to the relative address specified by the signed 8-bit operand, adepending
+    /// on the condition
+    Jr(Condition, Imm8),
 
-        /// Substracts one byte of immediate data and CY to the contents of register A and stores the
-        /// result to register A
-        Sbc(Imm8),
+    /// Unconditional function call to the absolute address specified b the 16-bit operand
+    Call(Imm16),
 
-        /// Substracts the content of memory specified by the contents of register16 and CY and stores
-        /// the result to register A
-        Sbc(Address(Register16)),
+    /// Conditional function call to the absolute address specified by the 16-bit operand,
+    /// depending on the condition
+    /// Note that the operand (absolute address) is read even when the condition is false!
+    Call(Condition, Imm16),
 
-        /// Takes the logical-AND for each bit of the contents in Register8 and registerA and stores
-        /// the result in register A
-        And(Register8),
+    /// Unconditional return from a function
+    Ret,
 
-        /// Takes the logical-AND for each bit of one byte of immediate data and registerA and stores
-        /// the result in register A
-        And(Imm8),
+    /// Conditonal return from a function, depending on the condition
+    Ret(Condition),
 
-        /// Takes the logical-AND for each bit of data pointed to by the contents of the Register16 and
-        /// the register A and stores the result in register A
-        And(Address(Register16)),
+    /// Unconditional return from a function. Also enable interrupts by setting IME=1
+    Reti,
 
-        /// Takes the logical-OR for each bit of the contents in Register8 and registerA and stores
-        /// the result in register A
-        Or(Register8),
+    /// Unconditional function call to the absolute fixed address defined by the opcode
+    Rst(Imm8),
 
-        /// Takes the logical-OR for each bit of one byte of immediate data and registerA and stores
-        /// the result in register A
-        Or(Imm8),
+    /// TODO: Halt
+    Halt,
 
-        /// Takes the logical-OR for each bit of data pointed to by the contents of the Register16 and
-        /// the register A and stores the result in register A
-        Or(Address(Register16)),
+    /// TODO: Stop
+    Stop,
 
-        //TODO: le reste
+    /// TODO: di
+    Di,
+
+    /// Schedules interrupt handling to be enabled after the next machine cycle
+    Ei,
+
+    /// No operation. This instruction adds a delay of one machine cycle and increment PC by one
+    Nop,
 }
-*/
+
+pub enum Condition {
+
+}
+
 #[allow(non_camel_case_types)]
 pub enum Opcode {
+
     /// Non CB prefixed opcodes
     NOP,
     LD_BC_d16,
@@ -276,19 +681,19 @@ pub enum Opcode {
 
     JR_NZ_r8,
     LD_HL_d16,
-    LD_HL_A,
+    LDI_HL_A,
     INC_HL,
     INC_H,
     DEC_H,
     LD_H_d8,
     DAA,
-    JR_Z_d8,
+    JR_Z_r8,
     ADD_HL_HL,
-    LD_A_HL,
+    LDI_A_HL,
     DEC_HL,
     INC_L,
     DEC_L,
-    LD_L,
+    LD_L_d8,
     CPL,
 
     JR_NC_r8,
