@@ -1520,7 +1520,270 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         vec![Clock::Sixteen],
     ),
     /// 0xD0 -0xDF
-    /// TODO!
+    Instruction::new(
+        Opcode::RET_NC,
+        "RET NC",
+        None,
+        Operation::Ret(Condition::NC),
+        vec![Clock::Twenty, Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::POP_DE,
+        "POP DE",
+        None,
+        Operation::Pop(Register16::DE),
+        vec![Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::JP_NC_a16,
+        "JP NC, {:#06x}",
+        Some(Imm::16),
+        Operation::Jp(Conditon::NC, Imm::16),
+        vec![Clock::Sixteen, Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::CALL_NC_a16,
+        "CALL NC, {:#06x}",
+        Some(Imm::16),
+        Operation::Call(Condition::NC, Imm::16),
+        vec![Clock::TwentyFour, Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::PUSH_DE,
+        "PUSH DE",
+        None,
+        Operation::Push(Register16::DE),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::SUB_d8,
+        "SUB {:#04x}",
+        Some(Imm::8),
+        Operation::Sub(Imm::8),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RST_10H,
+        "RST 10H",
+        None,
+        Operation::Rst(Page0::Byter2),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::RET_C,
+        "RET C",
+        None,
+        Operation::Ret(Condition::C),
+        vec![Clock::Twenty, Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RETI,
+        "RETI",
+        None,
+        Operation::Reti,
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::JP_C_a16,
+        "JP C, {:#06x}",
+        Some(Imm::16),
+        Operation::Jp(Condition::C, Imm::16),
+        vec![Clock::Sixteen, Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::CALL_C_a16,
+        "CALL C, {:#06x}",
+        Some(Imm::16),
+        Operation::Call(Condition::C, Imm::16),
+        vec![Clock::TwentyFour, Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::SBC_A_d8,
+        "SBC A, {:#04x}",
+        Some(Imm::8),
+        Operation::Sbc(Imm::8),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RST_18H,
+        "RST 18H",
+        None,
+        Operation::Rst(Page0::Byte3),
+        vec![Clock::Sixteen],
+    ),
+    /// 0xE0 - 0xEF
+
+    Instruction::new(
+        Opcode::LDH_a8_A,
+        "LDH {:#04x}, A",
+        Some(Imm::8),
+        Operation::LoadH(Adress(Imm::8), Register8::A),
+        vec![Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::POP_HL,
+        "POP HL",
+        None,
+        Operation::Pop(Register16::HL),
+        vec![Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::LD_aC_A,
+        "LD (C), A",
+        None,
+        Operation::Load(Adress::C, Register8::A),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::PUSH_HL,
+        "PUSH HL",
+        None,
+        Operation::Push(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::AND_d8,
+        "AND {:#04x}",
+        Some(Imm::8),
+        Operation::And(Imm::8),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RST_20H,
+        "RST 20H",
+        None,
+        Operation::Rst(Page0::Byte4),
+        vec![Clock::Sixteen],
+    ),
+    //TODO: pas certaine de cette instruction
+    Instruction::new(
+        Opcode::ADD_SP_r8,
+        "ADD SP, {:#04x}",
+        Some(Imm::8),
+        Operation::Add(Register16::SP, Imm::8),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::JP_aHL,
+        "JP (HL)",
+        None,
+        Operation::Jp(Address::HL),
+        vec![Clock::Four],
+    ),
+    Instruction::new(
+        Opcode::LD_a16_A,
+        "LD {:#06x}",
+        Some(Imm::16),
+        Operation::Load(Address(Imm::16), Register8::A),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::XOR_d8,
+        "XOR {:#04x}",
+        Some(Imm::8),
+        Operation::Xor(Imm::8),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RST_28H,
+        "RST 20H",
+        None,
+        Operation::Rst(Page0::Byte5),
+        vec![Clock::Sixteen],
+    ),
+    /// 0xF0 - 0xFF
+
+    Instruction::new(
+        Opcode::LDH_A_a8,
+        "LDH A, {:#04x}",
+        Some(Imm::8),
+        Operation::LoadH(Register8::A, Imm::8),
+        vec![Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::POP_AF,
+        "POP AF",
+        None,
+        Operation::Pop(Register16::AF),
+        vec![Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::LD_A_aC,
+        "LD A, (C)",
+        None,
+        Operation::Load(Register8::A, Address::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::DI,
+        "DI",
+        None,
+        Operation::Di,
+        vec![Clock::Four],
+    ),
+    Instruction::new(
+        Opcode::PUSH_AF,
+        "PUSH AF",
+        None,
+        Operation::Push(Register16::AF),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::OR_d8,
+        "OR {:#04x}",
+        Some(Imm::8),
+        Operation::Or(Imm::8),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RST_30H,
+        "RST 30H",
+        None,
+        Operation::Rst(Page0::Byte6),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::LD_HL_SP_r8,
+        "LD HL, SP+{:#04x}",
+        Some(Imm::8),
+        Operation::Load(Register16::HL, Register16::SP, Imm::8),
+        vec![Clock::Twelve],
+    ),
+    Instruction::new(
+        Opcode::LD_A_a16,
+        "LD A, {:#08x}",
+        Some(Imm::16),
+        Operation::Load(Register8::A, Address(Imm::16)),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::XOR_d8,
+        "XOR {:#04x}",
+        Some(Imm::8),
+        Operation::Xor(Imm::8),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::EI,
+        "EI",
+        None,
+        Operation::Ei,
+        vec![Clock::Four],
+    ),
+    Instruction::new(
+        Opcode::CP_d8,
+        "CP {:#04x}",
+        Some(Imm::8),
+        Operation::Cp(Imm::8),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RST_38H,
+        "RST 38H",
+        None,
+        Operation::Rst(Page0::Byte7),
+        vec![Clock::Sixteen],
+    ),
 ];
 
 pub enum Address {
@@ -1554,12 +1817,12 @@ pub enum Operation {
     /// Loads to the 8-bit register, data from the address. The full 16-bit absolute address is
     /// obtained by setting the most significant byte to 0xFF and the least significant byte to the
     /// value . So the possible range is 0xFF00- 0xFFFF.
-    LoadH(Register8, Address),
+    LoadH(Register8, Imm8),
 
     /// Loads to the address specified by the indirect, data from the 8-bit register. The full
     /// 16-bit absolute address is obtained by setting the most significant byte to 0xFF and the
     /// least significant byte to the value of Address, so the possible range is 0xFF00 - 0xFFFF.
-    LoadH(Address, Register8),
+    LoadH(Imm8, Register8),
 
     /// Loads to the absolute address specified by the 16-bit register, data from the 8-bit register. The value of the register is decremented after the memory write.
     LoadD(Address, Register8),
@@ -1606,6 +1869,10 @@ pub enum Operation {
     /// Adds to the 8-bit register A, the immediata 8-bit data and stores the result back into
     /// register A
     Add(Imm8),
+
+
+    //TODO: describe
+    Add(Register16, Imm8),
 
     /// Adds to the 8-bit register A, the carry flag and the 8-bit register, and stores the result
     /// back into register A
