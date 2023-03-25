@@ -614,7 +614,7 @@ impl Cpu {
     /// TODO: returns the CPU state
     fn execute(&mut self, instruction: Instruction) {
         match instruction.operation {
-            Operation::Load(dst, src) => {
+            Operation::Load(dst, src)  => { 
                 load(dst, src);
             },
             Operation::Jp(condition) => {
@@ -651,16 +651,22 @@ impl Cpu {
     /// Condition::Always
     fn jump_relative(condition: Condition) {
         
-        let operand = self.read_imm8();
+        let operand = self.read_imm8() as u16;
 
         if FlagsRegister.check_condition(condition) {
-            self.pc = self.pc + operand;
+            self.pc += operand;
         }
     }
 
-    fn load(destination: LoadParam, source: LoadParam) {
-        //TODO:
+    fn load8(destination: LoadParam, source: LoadParam) {
+        match source {
+            LoadParam::Imm8 => self.read_imm8(self.pc),
+            LoadParam::Address => todo!(),
+            LoadParam::
+        }
     }
+
+    fn load16(destination: Load16Target, 
     //TODO:
     // Faire une fonction qui prend en parametre le nombre de ligne 
     // d'instruction a renvoyer a partir de l'addresse actuelle du CPU

@@ -2362,7 +2362,7 @@ pub enum Condition {
     Always,
 }
 
-pub enum Address {
+pub enum At {
     HL,
     BC,
     DE,
@@ -2370,54 +2370,41 @@ pub enum Address {
     C,
     Imm8,
 }
+pub enum Load8Source {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H
+    L,
+    Imm8,
+    Addr(At),
+}
+
+pub enum LoadTarget {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    Address(At),
+}
 
 pub enum Operation {
 
     /// 8-bit load instructions
     
-    /// Loads to the left-hand 8-bit register, data from the right-hand 8-bit register 
-    Load(Register8, Register8),
+    Load8(LoadTarget, LoadSource),
 
-    /// Loads to the 8-bit register, the immediate 8-bit data
-    Load(Register8, Imm8),
+    LoadH(LoadTarget, LoadSource),
 
-    /// Loads to the 8-bit register, data from the absolute address
-    Load(Register8, Address),
+    LoadD(LoadTarget, LoadSource),
 
-    /// Loads to the absolute address, data from the 8-bit register
-    Load(Address, Register8),
+    LoadI(LoadTarget, LoadSource),
 
-    /// Loads to the absolute address, the immediate 8-bit data
-    Load(Address, Imm8),
-
-    /// Loads to the 8-bit register, data from the address. The full 16-bit absolute address is
-    /// obtained by setting the most significant byte to 0xFF and the least significant byte to the
-    /// value . So the possible range is 0xFF00- 0xFFFF.
-    LoadH(Register8, Imm8),
-
-    /// Loads to the address specified by the indirect, data from the 8-bit register. The full
-    /// 16-bit absolute address is obtained by setting the most significant byte to 0xFF and the
-    /// least significant byte to the value of Address, so the possible range is 0xFF00 - 0xFFFF.
-    LoadH(Imm8, Register8),
-
-    /// Loads to the absolute address specified by the 16-bit register, data from the 8-bit register. The value of the register is decremented after the memory write.
-    LoadD(Address, Register8),
-
-    
-    /// Loads to the 8-bit register, data from the absolute address specified by the 16-bit register. The value of the register is decremented after the memory write.
-    LoadD(Register8, Address),
-
-    
-    /// Loads to the absolute address specified by the 16-bit register, data from the 8-bit register. The value of the register is incremented after the memory write.
-    LoadI(Address, Register8),
-
-    
-    /// Loads to the 8-bit register, data from the absolute address specified by the 16-bit register. The value of the register is incremented after the memory write.
-    LoadI(Register8, Address),
-
-    /// 16-bit load instructions
-
-    /// Loads to the 16-bit register, the immeidate 16-bit data
     Load(Register16, Imm16),
 
     /// Loads to the absolute address specified by the 16-bit operand, data from the 16-bit
