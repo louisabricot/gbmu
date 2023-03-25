@@ -13,26 +13,11 @@ pub struct Instruction {
     pub operation: Operation,
     
     /// The number of clock cycle
-    pub clock_cycle: Clock,
-    
-    // /The flags affected by the instruction
-    //flags: Flags,
+    pub clock_cycle: Vec<Clock>, // TODO !!
 }
-
-pub enum Flags {
-    ZERO,
-    SUBTRACT,
-    HALFCARRY,
-    CARRY,
-    NOT_AFFECTED,
-    RESET,
-}
-
 
 /// Enumerates the instructions speed in clock cycle
 pub enum Clock {
-    Condition,
-    None,
     Four,
     Eight,
     Twelve,

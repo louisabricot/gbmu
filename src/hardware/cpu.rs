@@ -623,6 +623,20 @@ impl Cpu {
         }
     }
 
+    //TODO:
+    // Faire une fonction qui prend en parametre le nombre de ligne 
+    // d'instruction a renvoyer a partir de l'addresse actuelle du CPU
+    //
+    // Les instructions doivent contenir la longueur de l'operande
+    // pour que l'on puisse parser les instructions sans les executer.
+    //
+    // Une fonction doit pouvoir retourner une string contenant
+    // l'instruction et sont operand exacte, exemple:
+    // mov eax, 0x8 # operand numerique
+    // mov eax, [0x800] # addresse a laquelle recuperer
+    // La fonction doit pouvoir recuperer cette information
+    // a partir de n'importe quelle addresse
+    //
     pub fn step(&mut self) {
         match self.state {
             State::RUNNING => {
