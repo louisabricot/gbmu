@@ -1439,7 +1439,7 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Opcode::JP_a16,
         "JP {:#06x}",
         Some(Imm::16),
-        Operation::Jp(Imm::16),
+        Operation::Jp(Condition::Always, Imm::16),
         vec![Clock::Sixteen],
     ),
     Instruction::new(
@@ -1481,7 +1481,7 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Opcode::RET,
         "RET",
         None,
-        Operation::Ret,
+        Operation::Ret(Condition::Always),
         vec![Clock::Sixteen],
     ),
     Instruction::new(
@@ -1502,7 +1502,7 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Opcode::CALL_a16,
         "CALL {:#06x}",
         Some(Imm::16),
-        Operation::Call(Imm::16),
+        Operation::Call(Condition::Always, Imm::16),
         vec![Clock::TwentyFour],
     ),
     Instruction::new(
@@ -1667,7 +1667,7 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Opcode::JP_aHL,
         "JP (HL)",
         None,
-        Operation::Jp(Address::HL),
+        Operation::Jp(Condition::Always, Address::HL),
         vec![Clock::Four],
     ),
     Instruction::new(
@@ -1784,7 +1784,583 @@ static INSTRUCTIONS: &'static [Instruction; 7] = &[
         Operation::Rst(Page0::Byte7),
         vec![Clock::Sixteen],
     ),
+
+    /// CB-prefixed instruction
+    /// 0x00 - 0x0F
+    Instruction::new(
+        Opcode::RLC_B,
+        "RLC B",
+        None,
+        Operation::Rlc(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RLC_C,
+        "RLC C",
+        None,
+        Operation::Rlc(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RLC_D,
+        "RLC D",
+        None,
+        Operation::Rlc(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RLC_E,
+        "RLC E",
+        None,
+        Operation::Rlc(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RLC_H,
+        "RLC H",
+        None,
+        Operation::Rlc(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RLC_L,
+        "RLC L",
+        None,
+        Operation::Rlc(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RLC_HL,
+        "RLC HL",
+        None,
+        Operation::Rlc(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::RLC_A,
+        "RLC A",
+        None,
+        Operation::Rlc(Register8::A),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_B,
+        "RRC B",
+        None,
+        Operation::Rrc(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_C,
+        "RRC C",
+        None,
+        Operation::Rrc(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_D,
+        "RRC D",
+        None,
+        Operation::Rrc(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_E,
+        "RRC E",
+        None,
+        Operation::Rrc(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_H,
+        "RRC H",
+        None,
+        Operation::Rrc(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_L,
+        "RRC L",
+        None,
+        Operation::Rrc(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RRC_HL,
+        "RRC HL",
+        None,
+        Operation::Rrc(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::RRC_A,
+        "RRC A",
+        None,
+        Operation::Rrc(Register8::A),
+        vec![Clock::Eight],
+    ),
+    /// 0x10 - 0x1F
+    Instruction::new(
+        Opcode::RL_B,
+        "RL B",
+        None,
+        Operation::Rl(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RL_C,
+        "RL C",
+        None,
+        Operation::Rl(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RL_D,
+        "RL D",
+        None,
+        Operation::Rl(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RL_E,
+        "RL E",
+        None,
+        Operation::Rl(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RL_H,
+        "RL H",
+        None,
+        Operation::Rl(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RL_L,
+        "RL L",
+        None,
+        Operation::Rl(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RL_HL,
+        "RL HL",
+        None,
+        Operation::Rl(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::RL_A,
+        "RL A",
+        None,
+        Operation::Rl(Register8::A),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_B,
+        "RR B",
+        None,
+        Operation::Rr(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_C,
+        "RR C",
+        None,
+        Operation::Rr(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_D,
+        "RR D",
+        None,
+        Operation::Rr(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_E,
+        "RR E",
+        None,
+        Operation::Rr(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_H,
+        "RR H",
+        None,
+        Operation::Rr(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_L,
+        "RR L",
+        None,
+        Operation::Rr(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::RR_HL,
+        "RR HL",
+        None,
+        Operation::Rr(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::RR_A,
+        "RR A",
+        None,
+        Operation::Rr(Register8::A),
+        vec![Clock::Eight],
+    ),
+    /// 0x20 - 0x2F
+    Instruction::new(
+        Opcode::SLA_B,
+        "SLA B",
+        None,
+        Operation::Sla(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SLA_C,
+        "SLA C",
+        None,
+        Operation::Sla(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SLA_D,
+        "SLA D",
+        None,
+        Operation::Sla(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SLA_E,
+        "SLA E",
+        None,
+        Operation::Sla(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SLA_H,
+        "SLA H",
+        None,
+        Operation::Sla(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SLA_L,
+        "SLA L",
+        None,
+        Operation::Sla(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SLA_HL,
+        "SLA HL",
+        None,
+        Operation::Sla(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::SLA_A,
+        "SLA A",
+        None,
+        Operation::Sla(Register8::A),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_B,
+        "SRA B",
+        None,
+        Operation::Sra(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_C,
+        "SRA C",
+        None,
+        Operation::Sra(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_D,
+        "SRA D",
+        None,
+        Operation::Sra(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_E,
+        "SRA E",
+        None,
+        Operation::Sra(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_H,
+        "SRA H",
+        None,
+        Operation::Sra(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_L,
+        "SRA L",
+        None,
+        Operation::Sra(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRA_HL,
+        "SRA HL",
+        None,
+        Operation::Sra(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::SRA_A,
+        "SRA A",
+        None,
+        Operation::Sra(Register8::A),
+        vec![Clock::Eight],
+    ),
+    /// 0x30 - 0x3F
+    Instruction::new(
+        Opcode::SWAP_B,
+        "SWAP B",
+        None,
+        Operation::Swap(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SWAP_C,
+        "SWAP C",
+        None,
+        Operation::Swap(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SWAP_D,
+        "SWAP D",
+        None,
+        Operation::Swap(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SWAP_E,
+        "SWAP E",
+        None,
+        Operation::Swap(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SWAP_H,
+        "SWAP H",
+        None,
+        Operation::Swap(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SWAP_L,
+        "SWAP L",
+        None,
+        Operation::Swap(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SWAP_HL,
+        "SWAP HL",
+        None,
+        Operation::Swap(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::SWAP_A,
+        "SWAP A",
+        None,
+        Operation::Swap(Register8::A),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_B,
+        "SRL B",
+        None,
+        Operation::Srl(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_C,
+        "SRL C",
+        None,
+        Operation::Srl(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_D,
+        "SRL D",
+        None,
+        Operation::Srl(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_E,
+        "SRL E",
+        None,
+        Operation::Srl(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_H,
+        "SRL H",
+        None,
+        Operation::Srl(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_L,
+        "SRL L",
+        None,
+        Operation::Srl(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::SRL_HL,
+        "SRL HL",
+        None,
+        Operation::Srl(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::SRL_A,
+        "SRL A",
+        None,
+        Operation::Srl(Register8::A),
+        vec![Clock::Eight],
+    ),
+    /// 0x40 - 0x4F
+    Instruction::new(
+        Opcode::BIT_0_B,
+        "BIT 0, B",
+        None,
+        Operation::Sla(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_C,
+        "BIT 0, C",
+        None,
+        Operation::Sla(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_D,
+        "BIT 0, D",
+        None,
+        Operation::Sla(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_E,
+        "BIT 0, E",
+        None,
+        Operation::Sla(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_H,
+        "BIT 0, H",
+        None,
+        Operation::Sla(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_L,
+        "BIT 0, L",
+        None,
+        Operation::Sla(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_HL,
+        "BIT 0, HL",
+        None,
+        Operation::Sla(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::BIT_0_A,
+        "BIT 0, A",
+        None,
+        Operation::Sla(Register8::A),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_B,
+        "BIT 1,B",
+        None,
+        Operation::Sra(Register8::B),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_C,
+        "BIT 1,C",
+        None,
+        Operation::Sra(Register8::C),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_D,
+        "BIT 1,D",
+        None,
+        Operation::Sra(Register8::D),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_E,
+        "BIT 1,E",
+        None,
+        Operation::Sra(Register8::E),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_H,
+        "BIT 1,H",
+        None,
+        Operation::Sra(Register8::H),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_L,
+        "BIT 1,L",
+        None,
+        Operation::Sra(Register8::L),
+        vec![Clock::Eight],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_HL,
+        "BIT 1,HL",
+        None,
+        Operation::Sra(Register16::HL),
+        vec![Clock::Sixteen],
+    ),
+    Instruction::new(
+        Opcode::BIT_1_A,
+        "BIT 1,A",
+        None,
+        Operation::Sra(Register8::A),
+        vec![Clock::Eight],
+    ),
+
 ];
+
+pub enum Condition {
+    NZ,
+    NC,
+    C,
+    Z,
+    Always,
+}
 
 pub enum Address {
     HL,
@@ -1993,31 +2569,19 @@ pub enum Operation {
 
 
     /// Control flow instructions
-    
-    /// Unconditional jump to the absolute address specified by the 16-bit operand
-    Jp(Address),
-
+    Jp(Register16::HL),
     /// Condition jump to the absolute address specified by the 16-bit operand, depending on the
     /// condition. Note that the operand (absolute address) is read even when condition is false.
-    Jp(Condition, Imm16),
-
-    /// Unconditional jump to the relative address specified by the signed 8-bit operand
-    Jr(Imm8),
+    Jp(Condition),
 
     /// Condition jump to the relative address specified by the signed 8-bit operand, adepending
     /// on the condition
-    Jr(Condition, Imm8),
-
-    /// Unconditional function call to the absolute address specified b the 16-bit operand
-    Call(Imm16),
+    Jr(Condition),
 
     /// Condition function call to the absolute address specified by the 16-bit operand,
     /// depending on the condition
     /// Note that the operand (absolute address) is read even when the condition is false!
     Call(Condition, Imm16),
-
-    /// Unconditional return from a function
-    Ret,
 
     /// Conditonal return from a function, depending on the condition
     Ret(Condition),
@@ -2042,10 +2606,6 @@ pub enum Operation {
 
     /// No operation. This instruction adds a delay of one machine cycle and increment PC by one
     Nop,
-}
-
-pub enum Condition {
-
 }
 
 #[allow(non_camel_case_types)]

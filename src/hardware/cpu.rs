@@ -27,6 +27,7 @@ impl Cpu {
     /// TODO: Set Stack Pointer and Program Counter
     /// TODO: Maybe add a INIT state?
     pub fn new(memory: Memory) -> Self {
+
         Self {
             registers: Registers::new(),
             pc: 0,
@@ -602,6 +603,7 @@ impl Cpu {
     /// Read the next 16 bits from memory
     /// Convert the value from little endian to big endian
     /// Update PC
+    /// Read imm16 takes two cycles
     fn read_imm16(&mut self) -> u16 {
         let least = self.read_imm8();
         let most = self.read_imm8();
@@ -610,19 +612,55 @@ impl Cpu {
 
     /// Execute an instruction
     /// TODO: returns the CPU state
-    fn execute(&mut self, opcode: Opcode) {
-        match opcode {
-            Opcode::LD_A_A => self.load(Register8::A, Register8::A),
-            Opcode::LD_A_B => self.load(Register8::A, Register8::B),
-            Opcode::LD_A_C => self.load(Register8::A, Register8::C),
-            Opcode::LD_A_D => self.load(Register8::A, Register8::D),
-            Opcode::LD_A_E => self.load(Register8::A, Register8::E),
-            Opcode::LD_A_H => self.load(Register8::A, Register8::H),
-            Opcode::LD_A_L => self.load(Register8::A, Register8::L),
+    fn execute(&mut self, instruction: Instruction) {
+        match instruction.operation {
+            Operation::Load(dst, src) => {
+                load(dst, src);
+            },
+            Operation::Jp(condition) => {
+                match conditon {
+                    condition => Condition::
+                }
+                jump(condition);
+            },
             _ => todo!(),
         }
     }
 
+    /// Jump to the absolute address speicified by the 16-bit operand, depending on the condition
+    /// Reads the 16-bit operand from immediate memory
+    /// Update the value of PC with the operand
+    /// Note that the operand is read even if the condition is false
+    /// Unconditional jumps are also handled by this function, their condition is of type
+    /// Condition::Always
+    fn jump(condition: Condition) {
+        
+        let address = self.read_imm16();
+
+        if FlagsRegister.check_condition(condition) {
+            self.pc = address;
+        }
+    }
+    
+    /// Jump to the relative address specified by the signed 8-bit operand, depending
+    /// on condition
+    /// Reads the 8-bit operand from immediate memory
+    /// Adds operand to PC if the condition is checked
+    /// Note that the operand is read even when the condition is false
+    /// Unconditional relative jumps are also handled by this fonction, their condition is of type
+    /// Condition::Always
+    fn jump_relative(condition: Condition) {
+        
+        let operand = self.read_imm8();
+
+        if FlagsRegister.check_condition(condition) {
+            self.pc = self.pc + operand;
+        }
+    }
+
+    fn load(destination: LoadParam, source: LoadParam) {
+        //TODO:
+    }
     //TODO:
     // Faire une fonction qui prend en parametre le nombre de ligne 
     // d'instruction a renvoyer a partir de l'addresse actuelle du CPU
@@ -646,13 +684,5 @@ impl Cpu {
             State::HALT => {}
             State::INTERRUPT => {}
         }
-    }
-
-    /// Put the value r2 into r1
-    /// TODO: returns the flags that are affected ?
-    fn load(&mut self, r1: Register8, r2: Register8) {
-        println!("LD {:?} {:?}", r1, r2);
-        let value = Registers::read8(&self.registers, r2);
-        Registers::write8(&mut self.registers, r1, value);
     }
 }
