@@ -22,7 +22,7 @@ impl Memory {
         }
     }
 
-    pub fn read8(&self, pc: u8) -> u8 {
+    pub fn read8(&self, pc: u16) -> u8 {
        return self.memory[pc as usize];
     }
 }

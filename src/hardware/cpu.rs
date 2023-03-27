@@ -1,4 +1,4 @@
-//use self::instructions::{Opcode};
+use self::instructions::{*};
 use self::registers::{Register8, Registers};
 use super::memory::Memory;
 
@@ -9,7 +9,7 @@ pub mod registers;
 
 pub struct Cpu {
     registers: Registers,
-    pc: u8,
+    pc: u16,
     sp: u16,
     state: State,
     memory: Memory,
@@ -42,11 +42,11 @@ impl Cpu {
     /// If opcode is 0xCB, reads the next byte and tries to match the opcode with CB prefixed
     /// opcodes
     ///
-    fn fetch_decode(&mut self) -> Opcode {
+    fn fetch(&mut self) -> Opcode {
         let opcode = self.read_imm8();
 
         if opcode == 0xCB {
-            return self.fetch_cb_opcode();
+            return self.fetch_cb();
         }
 
         match opcode {
@@ -314,7 +314,7 @@ impl Cpu {
         }
     }
 
-    fn fetch_cb_opcode(&mut self) -> Opcode {
+    fn fetch_cb(&mut self) -> Opcode {
         let opcode = self.read_imm8();
         match opcode {
             0x00 => Opcode::RLC_B,
@@ -393,6 +393,7 @@ impl Cpu {
             0x45 => Opcode::BIT_0_L,
             0x46 => Opcode::BIT_0_HL,
             0x47 => Opcode::BIT_0_A,
+            /*
             0x48 => Opcode::BIT_1_B,
             0x49 => Opcode::BIT_1_C,
             0x4A => Opcode::BIT_1_D,
@@ -588,6 +589,7 @@ impl Cpu {
             0xFD => Opcode::SET_7_L,
             0xFE => Opcode::SET_7_HL,
             0xFF => Opcode::SET_7_A,
+            */
             _ => panic!("value not part of the instruction set: 0xCB {:x}", opcode),
         }
     }
@@ -617,8 +619,8 @@ impl Cpu {
             Operation::Load(dst, src)  => { 
                 Self::load8(&self, dst, src);
             },
-            Operation::Jp(condition) => {
-                Self::jump(&self, condition);
+            Operation::Jp(condition, source) => {
+                Self::jump(&self, condition, source);
             },
             _ => todo!(),
         }
@@ -630,9 +632,15 @@ impl Cpu {
     /// Note that the operand is read even if the condition is false
     /// Unconditional jumps are also handled by this function, their condition is of type
     /// Condition::Always
-    fn jump(&self, condition: Condition) {
+    fn jump(&self, condition: Condition, source: Source16) {
         
-        let address: u16 = self.read_imm16();
+        let address: u16;
+
+        if source == Source16::Imm16 {
+            address = self.read_imm16();
+        } else {
+            address = Registers::read16(&self.registers, Register16::HL); 
+        }
 
         if FlagsRegister::check_condition(self.registers.f, condition) {
             self.pc = address;
@@ -676,8 +684,9 @@ impl Cpu {
     pub fn step(&mut self) {
         match self.state {
             State::RUNNING => {
-                let opcode = self.fetch_decode();
-                self.execute(opcode);
+                let opcode = self.fetch();
+                let instruction = self.decode(opcode);
+                self.execute(instruction);
             }
             State::HALT => {}
             State::INTERRUPT => {}
