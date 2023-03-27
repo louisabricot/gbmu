@@ -19,3 +19,10 @@ bitflags! {
         const CARRY = 0b0001_0000;
     }
 }
+
+impl FlagsRegister {
+    pub fn check_condition(conditon: Condition) -> bool {
+        todo!();
+        return true
+    }
+}

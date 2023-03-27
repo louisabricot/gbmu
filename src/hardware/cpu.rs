@@ -1,4 +1,4 @@
-use self::instructions::{Opcode};
+//use self::instructions::{Opcode};
 use self::registers::{Register8, Registers};
 use super::memory::Memory;
 
@@ -304,12 +304,12 @@ impl Cpu {
             0xF5 => Opcode::PUSH_AF,
             0xF6 => Opcode::OR_d8,
             0xF7 => Opcode::RST_30H,
-            0xF8 => Opcode::LD_HL_SPr8
+            0xF8 => Opcode::LD_HL_SPr8,
             0xF9 => Opcode::LD_SP_HL,
             0xFA => Opcode::LD_A_a16,
             0xFB => Opcode::EI,
             0xFE => Opcode::CP_d8,
-            0xFF => Opcode::RST_38H
+            0xFF => Opcode::RST_38H,
             _ => panic!("value not part of the instruction set: {:?}", opcode),
         }
     }
@@ -615,13 +615,10 @@ impl Cpu {
     fn execute(&mut self, instruction: Instruction) {
         match instruction.operation {
             Operation::Load(dst, src)  => { 
-                load(dst, src);
+                Self::load8(&self, dst, src);
             },
             Operation::Jp(condition) => {
-                match conditon {
-                    condition => Condition::
-                }
-                jump(condition);
+                Self::jump(&self, condition);
             },
             _ => todo!(),
         }
@@ -633,11 +630,11 @@ impl Cpu {
     /// Note that the operand is read even if the condition is false
     /// Unconditional jumps are also handled by this function, their condition is of type
     /// Condition::Always
-    fn jump(condition: Condition) {
+    fn jump(&self, condition: Condition) {
         
-        let address = self.read_imm16();
+        let address: u16 = self.read_imm16();
 
-        if FlagsRegister.check_condition(condition) {
+        if FlagsRegister::check_condition(self.registers.f, condition) {
             self.pc = address;
         }
     }
@@ -653,20 +650,15 @@ impl Cpu {
         
         let operand = self.read_imm8() as u16;
 
-        if FlagsRegister.check_condition(condition) {
+        if FlagsRegister::check_condition(self.registers.f, condition) {
             self.pc += operand;
         }
     }
 
-    fn load8(destination: LoadParam, source: LoadParam) {
-        match source {
-            LoadParam::Imm8 => self.read_imm8(self.pc),
-            LoadParam::Address => todo!(),
-            LoadParam::
-        }
+    fn load8(&self, destination: LoadParam, source: LoadParam) {
+        todo!();
     }
 
-    fn load16(destination: Load16Target, 
     //TODO:
     // Faire une fonction qui prend en parametre le nombre de ligne 
     // d'instruction a renvoyer a partir de l'addresse actuelle du CPU
