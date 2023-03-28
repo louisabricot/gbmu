@@ -23,6 +23,7 @@ const SCREEN_HEIGHT: u32 = SPACE_SZ * 6 + BTN_HEIGHT * 3 + REG_HEIGHT + PRG_HEIG
 /// Represent the Debugger window
 pub struct Debugger {
     canvas: Canvas<Window>,
+    boxes: Vec<TextBox>,
     buttons: Vec<Button>,
 }
 
@@ -38,6 +39,7 @@ impl Debugger {
         let mut canvas = window.into_canvas().build().unwrap();
         canvas.set_draw_color(Color::RED);
 
+        let mut boxes = Vec::new();
         let mut buttons = Vec::new();
 
         // Load - Save - Reset
@@ -63,18 +65,14 @@ impl Debugger {
         let y = SPACE_SZ * 2 + BTN_HEIGHT;
         let width = SCREEN_WIDTH - SPACE_SZ * 2;
         let height = REG_HEIGHT;
-        canvas
-            .fill_rect(Rect::new(x as i32, y as i32, width, height))
-            .ok();
+        boxes.push(TextBox::new(x as i32, y as i32, width, height));
 
         // Program execution
         let x = SPACE_SZ;
         let y = SPACE_SZ * 3 + BTN_HEIGHT + REG_HEIGHT;
         let width = SCREEN_WIDTH - SPACE_SZ * 2;
         let height = PRG_HEIGHT;
-        canvas
-            .fill_rect(Rect::new(x as i32, y as i32, width, height))
-            .ok();
+        boxes.push(TextBox::new(x as i32, y as i32, width, height));
 
         // Play - Pause - Step
         let labels = vec!["Play", "Pause", "Step"];
@@ -107,7 +105,11 @@ impl Debugger {
             "Speed".to_string(),
         ));
 
-        Self { canvas, buttons }
+        Self {
+            canvas,
+            boxes,
+            buttons,
+        }
     }
 
     pub fn click(&self, x: i32, y: i32) -> Option<&Button> {
@@ -120,6 +122,12 @@ impl Debugger {
     pub fn print_frame(&mut self) {
         for button in &mut self.buttons {
             match button.draw(&mut self.canvas) {
+                Ok(()) => (),
+                Err(e) => println!("{}", e),
+            }
+        }
+        for textbox in &mut self.boxes {
+            match textbox.draw(&mut self.canvas, vec!["abc", "def", "ghi"]) {
                 Ok(()) => (),
                 Err(e) => println!("{}", e),
             }
@@ -174,5 +182,46 @@ impl Button {
 
     pub fn action(&self) {
         println!("{}", self.text);
+    }
+}
+
+pub struct TextBox {
+    rect: Rect,
+}
+
+impl TextBox {
+    fn new(x: i32, y: i32, width: u32, height: u32) -> Self {
+        Self {
+            rect: Rect::new(x, y, width, height),
+        }
+    }
+
+    fn draw(&self, canvas: &mut Canvas<Window>, lines: Vec<&str>) -> Result<(), String> {
+        canvas.set_draw_color(Color::RED);
+        canvas.fill_rect(self.rect)?;
+
+        let ttf_context = sdl2::ttf::init().unwrap();
+        let texture_creator = canvas.texture_creator();
+
+        // Load a font
+        let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
+        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 64)?;
+
+        let line_height = self.rect.height() / lines.len() as u32;
+        for (index, line) in lines.iter().enumerate() {
+            // render a surface, and convert it to a texture bound to the canvas
+            let surface = font.render(line).solid(Color::WHITE).unwrap();
+            let texture = texture_creator
+                .create_texture_from_surface(&surface)
+                .unwrap();
+            let target = Rect::new(
+                self.rect.x(),
+                self.rect.y() + (index * line_height as usize) as i32,
+                self.rect.width(),
+                line_height,
+            );
+            canvas.copy(&texture, None, Some(target).unwrap())?;
+        }
+        Ok(())
     }
 }
