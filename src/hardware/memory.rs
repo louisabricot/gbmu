@@ -3,7 +3,7 @@ pub struct Memory {
     //0x0000 - 0x00FF : Boot ROM then interrupt table
     //0x0000 - 0x3FFF : Bank0, always the same memory, cannot be switched out later
     //0x4000 - 0x7FFF : Bank N, for bank switching
-    //0x8000 - 0x9FFF : Tile RAM 
+    //0x8000 - 0x9FFF : Tile RAM
     //0x9800 - 0x9FFF : Background Map
     //0xA000 - 0xBFFF : Cartridge RAM
     //0xC000 - 0xDFFF : Working RAM
@@ -17,12 +17,10 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(data: Vec<u8>) -> Self {
-        Self {
-            memory: data,
-        }
+        Self { memory: data }
     }
 
     pub fn read8(&self, pc: u16) -> u8 {
-       return self.memory[pc as usize];
+        return self.memory[pc as usize];
     }
 }
