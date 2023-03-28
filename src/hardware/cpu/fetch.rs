@@ -2,10 +2,8 @@ use super::instructions::Opcode;
 use crate::Cpu;
 
 impl Cpu {
-    /// Tries to match the opcode with valid opcode listed in Opcode enum
-    /// If opcode is 0xCB, reads the next byte and tries to match the opcode with CB prefixed
-    /// opcodes
-    ///
+    /// Returns the Opcode enum matching the opcode read from memory
+    /// If the opcode is 0xCB, the next byte is matched against CB-prefixed opcodes
     pub fn fetch(&mut self) -> Opcode {
         let opcode = self.read_imm8();
 

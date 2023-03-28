@@ -1,25 +1,29 @@
-/// https://gbdev.io/pandocs/CPU_Instruction_Set.html
-
-/// Represents both 8-bit and 16-bit instructions
+/// Describes information about the instruction set
 pub struct Instruction {
-    /// The portion of the instruction specifying the operation to perform. In the case of
+    /// To match each Instruction with a specific opcode
     pub opcode: Opcode,
 
-    /// A string that represents the instruction eg LD A (BC)
+    /// A string that represents the instruction in a human readable way, eg LD A, (BC)
     pub mnemonic: &'static str,
 
+    /// An optional variable to inform whether the instruction need operand stored in memory
+    /// Imm can be either Imm::Eight or Imm::Sixteen depending on whether the instruction needs
+    /// respectively an immediate 8-bit operand or an immediate 16-bit operand.
+    /// Set to None if the instruction does not require an immediate operand.
     pub operand: Option<Imm>,
 
-    /// The operation to perform
+    /// An `Operation` enum to describe the type of operation is encoded in the opcode.
     pub operation: Operation,
 
-    /// A list of clock cycles associated to the opcode, most opcodes have exactly one opcode, but
-    /// conditional instructions have two: clock_cycle[0] stores the clock cycle when the condition
-    /// is true and clock_cycle[1] when the condition is false
+    /// A list of clock cycles associated to the opcode.
+    /// Most opcodes have exactly one opcode, but conditional instructions have two:
+    /// clock_cycle[0] stores the clock cycle when the condition is true
+    /// and clock_cycle[1] when the condition is false
+    /// Unconditional fill the second index with Clock::None
     pub cycles: [Clock; 2],
 }
 
-/// Enumerates the instructions speed in clock cycle
+/// Enumerates the instruction speed in clock cycle
 pub enum Clock {
     None,
     Four,
@@ -42,12 +46,14 @@ pub enum Page0 {
     Byte7,
 }
 
+/// Represents the two possible sizes of immediate operands: either 8-bit or 16-bit
 pub enum Imm {
     Eight,
     Sixteen,
 }
 
 impl Instruction {
+    /// Creates an Instruction struct with values given as parameter
     const fn new(
         opcode: Opcode,
         mnemonic: &'static str,
@@ -64,6 +70,7 @@ impl Instruction {
         }
     }
 
+    /// Returns the instruction with a matching opcode
     pub fn getByOpcode(opcode: Opcode) -> Option<&'static Instruction> {
         for instruction in INSTRUCTIONS {
             if instruction.opcode == opcode {
@@ -73,7 +80,7 @@ impl Instruction {
         None
     }
 }
-
+/// A static array of all the instructions in the instructions set.
 static INSTRUCTIONS: &'static [Instruction; 324] = &[
     Instruction::new(
         Opcode::NOP,
@@ -2422,6 +2429,7 @@ pub enum Bit {
     SEVEN,
 }
 
+/// Represents all the possible operations from the instruction set
 pub enum Operation {
     /// 8-bit load instructions
     Load8(Target8, Source8),
@@ -2535,6 +2543,7 @@ pub enum Operation {
     Rst(Page0),
 }
 
+/// Lists all the GameBoy opcode both regular and CB-prefixed
 #[allow(non_camel_case_types)]
 #[derive(PartialEq)]
 pub enum Opcode {

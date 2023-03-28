@@ -23,4 +23,8 @@ impl Memory {
     pub fn read8(&self, pc: u16) -> u8 {
         return self.memory[pc as usize];
     }
+
+    pub fn write8(&self, pc: u16, value: u8) {
+        todo!()
+    }
 }

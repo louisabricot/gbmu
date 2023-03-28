@@ -118,8 +118,50 @@ impl Cpu {
         }
     }
 
-    fn load8(&self, destination: &Target8, source: &Source8) {
-        todo!();
+    fn get_source8(&mut self, source: &Source8) -> u8 {
+        match source {
+            Source8::A => self.registers.a,
+            Source8::B => self.registers.b,
+            Source8::C => self.registers.c,
+            Source8::D => self.registers.d,
+            Source8::E => self.registers.e,
+            Source8::H => self.registers.h,
+            Source8::L => self.registers.l,
+            Source8::Imm8 => self.read_imm8(),
+            Source8::Addr(at) => {
+                let address = self.get_address(at);
+                self.memory.read8(address)
+            }
+        }
+    }
+
+    fn get_address(&mut self, addr: &At) -> u16 {
+        match addr {
+            At::HL => self.registers.read16(Register16::HL),
+            At::BC => self.registers.read16(Register16::BC),
+            At::DE => self.registers.read16(Register16::DE),
+            At::Imm16 => self.read_imm16(),
+            At::Imm8 => 0xFF00 | self.read_imm8() as u16,
+            At::C => 0xFF00 | self.registers.c as u16,
+        }
+    }
+
+    /// TODO: maybe change the possible values of Addr(At) to separate LoadHalf from simple Load
+    fn load8(&mut self, destination: &Target8, source: &Source8) {
+        let value = self.get_source8(source);
+        match destination {
+            Target8::A => self.registers.a = value,
+            Target8::B => self.registers.b = value,
+            Target8::C => self.registers.c = value,
+            Target8::D => self.registers.d = value,
+            Target8::E => self.registers.e = value,
+            Target8::H => self.registers.h = value,
+            Target8::L => self.registers.l = value,
+            Target8::Addr(at) => {
+                let address = self.get_address(at);
+                self.memory.write8(address, value);
+            }
+        }
     }
 
     //TODO:

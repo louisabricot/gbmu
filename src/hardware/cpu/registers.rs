@@ -103,7 +103,7 @@ impl Registers {
         }
     }
 
-    /// Writes to the register represented by r8, the u8 num 
+    /// Writes to the register represented by r8, the u8 num
     pub fn write8(&mut self, r8: Register8, num: u8) {
         match r8 {
             Register8::A => self.a = num,
