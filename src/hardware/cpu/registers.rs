@@ -6,7 +6,6 @@ pub mod flags;
 /// Accumulator register (A) is an 8-bit register for storing data and the result of arithmetic and
 /// logical operations
 /// Auxiliary registers (B, C, D, E, F, H and L) serve as auxiliary registers to the acculmulator
-
 #[derive(Debug)]
 pub struct Registers {
     pub a: u8,
@@ -40,7 +39,7 @@ pub enum Register16 {
 }
 
 impl Registers {
-    /// Initializes registers with value 0
+    /// Returns an empty Registers struct
     pub fn new() -> Self {
         Self {
             a: 0,
@@ -55,7 +54,8 @@ impl Registers {
     }
 
     /// Reads the content of a pair of 8-bit register
-    ///
+    /// The first register of the pair stores the most significant byte and the second register
+    /// stores the least significant byte
     pub fn read16(&self, r16: Register16) -> u16 {
         match r16 {
             Register16::AF => (self.a as u16) << 8 | self.f.bits() as u16,
@@ -65,30 +65,31 @@ impl Registers {
         }
     }
 
-    /// Writes the u16 value into the pair of registers represented by Register16
-    ///
-    pub fn write16(&mut self, r16: Register16, value: u16) {
+    /// Writes the u16 num into the pair of registers represented by Register16
+    /// The first register of the pair stores the most significant byte of the num, and the
+    /// second register stores the least significant byte
+    pub fn write16(&mut self, r16: Register16, num: u16) {
         match r16 {
             Register16::AF => {
-                self.a = (value >> 8) as u8;
-                self.f = FlagsRegister::from_bits_truncate(value as u8);
+                self.a = (num >> 8) as u8;
+                self.f = FlagsRegister::from_bits_truncate(num as u8);
             }
             Register16::BC => {
-                self.b = (value >> 8) as u8;
-                self.c = value as u8;
+                self.b = (num >> 8) as u8;
+                self.c = num as u8;
             }
             Register16::DE => {
-                self.d = (value >> 8) as u8;
-                self.e = value as u8;
+                self.d = (num >> 8) as u8;
+                self.e = num as u8;
             }
             Register16::HL => {
-                self.h = (value >> 8) as u8;
-                self.l = value as u8;
+                self.h = (num >> 8) as u8;
+                self.l = num as u8;
             }
         }
     }
 
-    /// Reads the content in the register represented by r8
+    /// Returns the content stored in the register represented by r8
     pub fn read8(&self, r8: Register8) -> u8 {
         match r8 {
             Register8::A => self.a,
@@ -102,17 +103,17 @@ impl Registers {
         }
     }
 
-    /// Writes the u8 value into the register represented by r8
-    pub fn write8(&mut self, r8: Register8, value: u8) {
+    /// Writes to the register represented by r8, the u8 num 
+    pub fn write8(&mut self, r8: Register8, num: u8) {
         match r8 {
-            Register8::A => self.a = value,
-            Register8::B => self.b = value,
-            Register8::C => self.c = value,
-            Register8::D => self.d = value,
-            Register8::E => self.e = value,
-            Register8::F => self.f = FlagsRegister::from_bits_truncate(value),
-            Register8::H => self.h = value,
-            Register8::L => self.l = value,
+            Register8::A => self.a = num,
+            Register8::B => self.b = num,
+            Register8::C => self.c = num,
+            Register8::D => self.d = num,
+            Register8::E => self.e = num,
+            Register8::F => self.f = FlagsRegister::from_bits_truncate(num),
+            Register8::H => self.h = num,
+            Register8::L => self.l = num,
         }
     }
 }
