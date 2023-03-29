@@ -1,3 +1,5 @@
+use crate::hardware::cpu::registers::Register16;
+
 /// Describes information about the instruction set
 pub struct Instruction {
     /// To match each Instruction with a specific opcode
@@ -1430,7 +1432,7 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::POP_BC,
         "POP BC",
         None,
-        Operation::Pop(Source16::BC),
+        Operation::Pop(Register16::BC),
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
@@ -1458,7 +1460,7 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::PUSH_BC,
         "PUSH BC",
         None,
-        Operation::Push(Source16::BC),
+        Operation::Push(Register16::BC),
         [Clock::Sixteen, Clock::None],
     ),
     Instruction::new(
@@ -1535,7 +1537,7 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::POP_DE,
         "POP DE",
         None,
-        Operation::Pop(Source16::DE),
+        Operation::Pop(Register16::DE),
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
@@ -1556,7 +1558,7 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::PUSH_DE,
         "PUSH DE",
         None,
-        Operation::Push(Source16::DE),
+        Operation::Push(Register16::DE),
         [Clock::Sixteen, Clock::None],
     ),
     Instruction::new(
@@ -1619,14 +1621,14 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::LDH_a8_A,
         "LDH {:#04x}, A",
         Some(Imm::Eight),
-        Operation::Load8Half(Target8::Addr(At::Imm8), Source8::A),
+        Operation::Load8(Target8::Addr(At::Imm8), Source8::A),
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
         Opcode::POP_HL,
         "POP HL",
         None,
-        Operation::Pop(Source16::HL),
+        Operation::Pop(Register16::HL),
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
@@ -1640,7 +1642,7 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::PUSH_HL,
         "PUSH HL",
         None,
-        Operation::Push(Source16::HL),
+        Operation::Push(Register16::HL),
         [Clock::Sixteen, Clock::None],
     ),
     Instruction::new(
@@ -1697,14 +1699,14 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::LDH_A_a8,
         "LDH A, {:#04x}",
         Some(Imm::Eight),
-        Operation::Load8Half(Target8::A, Source8::Addr(At::Imm8)),
+        Operation::Load8(Target8::A, Source8::Addr(At::Imm8)),
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
         Opcode::POP_AF,
         "POP AF",
         None,
-        Operation::Pop(Source16::AF),
+        Operation::Pop(Register16::AF),
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
@@ -1725,7 +1727,7 @@ static INSTRUCTIONS: &'static [Instruction; 324] = &[
         Opcode::PUSH_AF,
         "PUSH AF",
         None,
-        Operation::Push(Source16::AF),
+        Operation::Push(Register16::AF),
         [Clock::Sixteen, Clock::None],
     ),
     Instruction::new(
@@ -2399,7 +2401,7 @@ pub enum Target8 {
 
 #[derive(PartialEq)]
 pub enum Target16 {
-    AF,
+    //AF,
     BC,
     DE,
     HL,
@@ -2409,13 +2411,13 @@ pub enum Target16 {
 
 #[derive(PartialEq)]
 pub enum Source16 {
-    AF,
+    //AF,
     BC,
     DE,
     HL,
     SP,
     Imm16,
-    Imm8,
+    //Imm8,
 }
 
 pub enum Bit {
@@ -2434,8 +2436,6 @@ pub enum Operation {
     /// 8-bit load instructions
     Load8(Target8, Source8),
 
-    Load8Half(Target8, Source8),
-
     Load8Dec(Target8, Source8),
 
     Load8Inc(Target8, Source8),
@@ -2443,9 +2443,9 @@ pub enum Operation {
     /// 16-bit load instructions
     Load16(Target16, Source16),
 
-    Push(Source16),
+    Push(Register16),
 
-    Pop(Source16),
+    Pop(Register16),
 
     /// 8-bit arithmetic / logic instructions
     Add8(Source8),
