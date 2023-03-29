@@ -64,9 +64,49 @@ impl Cpu {
     /// TODO: returns the CPU state
     fn execute(&mut self, instruction: &Instruction) {
         match &instruction.operation {
+            // 8-bit load instructions
             Operation::Load8(dst, src) => {
                 self.load8(dst, src);
             }
+
+            // TODO: clean code because super redundant
+            Operation::Load8Dec(dst, src) => {
+                self.load8(dst, src);
+                let hl = self.registers.read16(Register16::HL);
+                self.registers.write16(Register16::HL, hl - 1);
+            }
+            Operation::Load8Inc(dst, src) => {
+                self.load8(dst, src);
+                let hl = self.registers.read16(Register16::HL);
+                self.registers.write16(Register16::HL, hl + 1);
+            }
+
+            // 16-bit load instructions
+            Operation::Load16(dst, src) => {
+                self.load16(dst, src);
+            }
+            Operation::Push(target) => {
+                self.push(target);
+            }
+            Operation::Pop(target) => {
+                self.pop(target);
+            }
+
+            // 8-bit arithmetic and logical instructions
+            Operation::Add8(source) => {
+                self.add8(source);
+            }
+            //TODO: adc, sub, sbc, and, xor, or, cp, inc8, dec8, daa, cpl
+
+            // 16-bit arithmetic/logic instructions
+
+            //TODO: add16, inc16, dec16, loadHL
+
+            // Rotate, shift and bit operations
+            //TODO: Rlca, Rla, Rrca, Rra, Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
+            //TODO: bit, set, res
+            // Control Flow instruction
+            //TODO: Ccf, Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
             Operation::Jp(condition, source) => {
                 self.absolute_jump(condition, source);
             }
@@ -77,6 +117,27 @@ impl Cpu {
         }
     }
 
+    fn add8(source: Source8) {
+        let value = self.get_source8(source);
+
+        //TODO: half carry
+
+        let (result, carry) = self.registers.a.carrying_add(value);
+
+        /// Z: Set if the result is 0, otherwise reset
+        self.registers.f.set(FlagsRegister::ZERO, result == 0);
+
+        /// H: Set if there is a carry from bit3; otherwise reset
+        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+
+        /// N: Reset
+        self.registers.f.set(FlagsRegister::SUBTRACT, false);
+
+        /// CY: Set if there is a carry from bit7; otherwise reset
+        self.registers.f.set(FlagsRegister::CARRY, carry);
+
+        self.registers.write8(Register8::A, result);
+    }
     /// Jump to the absolute address speicified by the 16-bit operand, depending on the condition
     /// Reads the 16-bit operand from immediate memory
     /// Update the value of PC with the operand
@@ -118,6 +179,7 @@ impl Cpu {
         }
     }
 
+    /// 8-bit load instructions
     fn get_source8(&mut self, source: &Source8) -> u8 {
         match source {
             Source8::A => self.registers.a,
@@ -146,7 +208,6 @@ impl Cpu {
         }
     }
 
-    /// TODO: maybe change the possible values of Addr(At) to separate LoadHalf from simple Load
     fn load8(&mut self, destination: &Target8, source: &Source8) {
         let value = self.get_source8(source);
         match destination {
@@ -162,6 +223,50 @@ impl Cpu {
                 self.memory.write8(address, value);
             }
         }
+    }
+
+    /// 16-bit load instructions
+    fn get_source16(&mut self, source: &Source16) -> u16 {
+        match source {
+            Source16::BC => self.registers.read16(Register16::BC),
+            Source16::DE => self.registers.read16(Register16::DE),
+            Source16::HL => self.registers.read16(Register16::HL),
+            Source16::SP => self.sp,
+            Source16::Imm16 => self.read_imm16(),
+        }
+    }
+    fn load16(&mut self, destination: &Target16, source: &Source16) {
+        let value = self.get_source16(source);
+        match destination {
+            Target16::BC => self.registers.write16(Register16::BC, value),
+            Target16::DE => self.registers.write16(Register16::DE, value),
+            Target16::HL => self.registers.write16(Register16::HL, value),
+            Target16::SP => self.sp = value,
+            Target16::Addr => {
+                let address = self.read_imm16();
+                self.memory.write16(address, value);
+            }
+        }
+    }
+
+    fn push(&mut self, target: &Register16) {
+        let value = self.registers.read16(target);
+        let [lo, hi] = u16::to_le_bytes(value);
+
+        self.sp.wrapping_sub(1);
+        self.memory.write8(self.sp, hi);
+        self.sp.wrapping_sub(1);
+        self.memory.write8(self.sp, lo);
+    }
+
+    fn pop(&mut self, target: &Register16) {
+        self.sp.wrapping_add(1);
+        let lo = self.memory.read8(self.sp);
+        self.sp.wrapping_add(1);
+        let hi = self.memory.read8(self.sp);
+        self.sp.wrapping_add(1);
+
+        self.registers.write16(target, u16::from_le_bytes([lo, hi]));
     }
 
     //TODO:
