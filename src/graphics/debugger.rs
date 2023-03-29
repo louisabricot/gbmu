@@ -2,7 +2,7 @@ extern crate sdl2;
 
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use sdl2::render::Canvas;
+use sdl2::render::{Canvas, TextureQuery};
 use sdl2::rwops::RWops;
 use sdl2::ttf::Font;
 use sdl2::video::Window;
@@ -19,6 +19,41 @@ const PRG_HEIGHT: u32 = 400;
 const SCREEN_WIDTH: u32 = 300;
 /// Debugger height
 const SCREEN_HEIGHT: u32 = SPACE_SZ * 6 + BTN_HEIGHT * 3 + REG_HEIGHT + PRG_HEIGHT;
+
+/// Return a sdl2 Rect to scale text texture
+fn get_text_rect(
+    x: i32,
+    y: i32,
+    rect_width: u32,
+    rect_height: u32,
+    cons_width: u32,
+    cons_height: u32,
+    centered: bool,
+) -> Rect {
+    let wr = rect_width as f32 / cons_width as f32;
+    let hr = rect_height as f32 / cons_height as f32;
+
+    let (w, h) = if wr > 1f32 || hr > 1f32 {
+        if wr > hr {
+            // Scaling down
+            let h = (rect_height as f32 / wr) as i32;
+            (cons_width as i32, h)
+        } else {
+            // Scaling up
+            let w = (rect_width as f32 / hr) as i32;
+            (w, cons_height as i32)
+        }
+    } else {
+        (rect_width as i32, rect_height as i32)
+    };
+
+    let (cx, cy) = if centered {
+        (x + (cons_width as i32 - w) / 2, y + cons_height as i32 / 2)
+    } else {
+        (x, y)
+    };
+    Rect::new(cx as i32, cy as i32, w as u32, h as u32)
+}
 
 /// Represent the Debugger window
 pub struct Debugger {
@@ -126,11 +161,31 @@ impl Debugger {
                 Err(e) => println!("{}", e),
             }
         }
-        for textbox in &mut self.boxes {
-            match textbox.draw(&mut self.canvas, vec!["abc", "def", "ghi"]) {
-                Ok(()) => (),
-                Err(e) => println!("{}", e),
-            }
+        match self.boxes[0].draw(
+            &mut self.canvas,
+            vec![
+                "AB: 0xffff",
+                "     A: 0xff",
+                "     B: 0xff",
+                "CD: 0xffff",
+                "     C: 0xff",
+                "     D: 0xff",
+                "EF: 0xffff",
+                "     E: 0xff",
+                "     F: 0xff",
+                "HL: 0xffff",
+                "     H: 0xff",
+                "     L: 0xff",
+                "SP: 0xffff",
+                "PC: 0xffff",
+            ],
+        ) {
+            Ok(()) => (),
+            Err(e) => println!("{}", e),
+        }
+        match self.boxes[1].draw(&mut self.canvas, vec!["abc", "def", "ghi"]) {
+            Ok(()) => (),
+            Err(e) => println!("{}", e),
         }
         self.canvas.present();
     }
@@ -162,19 +217,23 @@ impl Button {
 
         // Load a font
         let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
-        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 64)?;
+        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
 
         // render a surface, and convert it to a texture bound to the canvas
+        let line_height = 15;
         let surface = font.render(self.text.as_str()).solid(Color::WHITE).unwrap();
         let texture = texture_creator
             .create_texture_from_surface(&surface)
             .unwrap();
-
-        let target = Rect::new(
+        let TextureQuery { width, height, .. } = texture.query();
+        let target = get_text_rect(
             self.rect.x(),
             self.rect.y(),
+            width,
+            height,
             self.rect.width(),
-            self.rect.height(),
+            line_height,
+            true,
         );
         canvas.copy(&texture, None, Some(target).unwrap())?;
         Ok(())
@@ -205,20 +264,26 @@ impl TextBox {
 
         // Load a font
         let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
-        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 64)?;
+        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
 
-        let line_height = self.rect.height() / lines.len() as u32;
+        let padding = 5;
+        let interline = 2;
+        let line_height = 10;
         for (index, line) in lines.iter().enumerate() {
             // render a surface, and convert it to a texture bound to the canvas
             let surface = font.render(line).solid(Color::WHITE).unwrap();
             let texture = texture_creator
                 .create_texture_from_surface(&surface)
                 .unwrap();
-            let target = Rect::new(
-                self.rect.x(),
-                self.rect.y() + (index * line_height as usize) as i32,
+            let TextureQuery { width, height, .. } = texture.query();
+            let target = get_text_rect(
+                self.rect.x() + padding,
+                self.rect.y() + (index * (line_height + interline) as usize) as i32 + padding,
+                width,
+                height,
                 self.rect.width(),
                 line_height,
+                false,
             );
             canvas.copy(&texture, None, Some(target).unwrap())?;
         }
