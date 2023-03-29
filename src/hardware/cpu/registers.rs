@@ -30,7 +30,7 @@ pub enum Register8 {
     L,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Register16 {
     AF,
     BC,
@@ -58,10 +58,28 @@ impl Registers {
     /// stores the least significant byte
     pub fn read16(&self, r16: Register16) -> u16 {
         match r16 {
-            Register16::AF => (self.a as u16) << 8 | self.f.bits() as u16,
-            Register16::BC => (self.b as u16) << 8 | self.c as u16,
-            Register16::DE => (self.d as u16) << 8 | self.e as u16,
-            Register16::HL => (self.h as u16) << 8 | self.l as u16,
+            Register16::AF => (self.a as u16) << u8::BITS | self.f.bits() as u16,
+            Register16::BC => (self.b as u16) << u8::BITS | self.c as u16,
+            Register16::DE => (self.d as u16) << u8::BITS | self.e as u16,
+            Register16::HL => (self.h as u16) << u8::BITS | self.l as u16,
+        }
+    }
+
+    pub fn msb(&self, r16: Register16) -> u8 {
+        match r16 {
+            Register16::AF => self.a,
+            Register16::BC => self.b,
+            Register16::DE => self.d,
+            Register16::HL => self.h,
+        }
+    }
+
+    pub fn lsb(&self, r16: Register16) -> u8 {
+        match r16 {
+            Register16::AF => self.f.bits(),
+            Register16::BC => self.c,
+            Register16::DE => self.e,
+            Register16::HL => self.l,
         }
     }
 
@@ -71,19 +89,19 @@ impl Registers {
     pub fn write16(&mut self, r16: Register16, num: u16) {
         match r16 {
             Register16::AF => {
-                self.a = (num >> 8) as u8;
+                self.a = (num >> u8::BITS) as u8;
                 self.f = FlagsRegister::from_bits_truncate(num as u8);
             }
             Register16::BC => {
-                self.b = (num >> 8) as u8;
+                self.b = (num >> u8::BITS) as u8;
                 self.c = num as u8;
             }
             Register16::DE => {
-                self.d = (num >> 8) as u8;
+                self.d = (num >> u8::BITS) as u8;
                 self.e = num as u8;
             }
             Register16::HL => {
-                self.h = (num >> 8) as u8;
+                self.h = (num >> u8::BITS) as u8;
                 self.l = num as u8;
             }
         }
