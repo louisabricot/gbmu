@@ -27,4 +27,8 @@ impl Memory {
     pub fn write8(&self, pc: u16, value: u8) {
         todo!()
     }
+
+    pub fn write16(&self, address: u16, value: u16) {
+        todo!()
+    }
 }
