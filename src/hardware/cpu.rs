@@ -1,6 +1,9 @@
-use self::instructions::*;
-use self::registers::{Register16, Registers};
+use self::registers::{Register16, Register8, Registers};
 use super::memory::Memory;
+use crate::hardware::cpu::instructions::{
+    At, Condition, Instruction, Opcode, Operation, Source16, Source8, Target16, Target8,
+};
+use crate::hardware::cpu::registers::flags::FlagsRegister;
 pub mod fetch;
 #[allow(dead_code)]
 pub mod instructions;
@@ -96,6 +99,12 @@ impl Cpu {
             Operation::Add8(source) => {
                 self.add8(source);
             }
+            Operation::Adc(source) => {
+                self.adc(source);
+            }
+            Operation::Sub(source) => {
+                self.sub(source);
+            }
             //TODO: adc, sub, sbc, and, xor, or, cp, inc8, dec8, daa, cpl
 
             // 16-bit arithmetic/logic instructions
@@ -117,26 +126,67 @@ impl Cpu {
         }
     }
 
-    fn add8(source: Source8) {
-        let value = self.get_source8(source);
-
-        //TODO: half carry
-
-        let (result, carry) = self.registers.a.carrying_add(value);
-
-        /// Z: Set if the result is 0, otherwise reset
-        self.registers.f.set(FlagsRegister::ZERO, result == 0);
-
-        /// H: Set if there is a carry from bit3; otherwise reset
-        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
-
-        /// N: Reset
-        self.registers.f.set(FlagsRegister::SUBTRACT, false);
-
-        /// CY: Set if there is a carry from bit7; otherwise reset
-        self.registers.f.set(FlagsRegister::CARRY, carry);
+    /// Adds to the 8-bit register the 8-bit value and updates FlagRegister as follows:.
+    /// Z: Set if the result of the addition is 0, otherwise reset
+    /// H: Set if there is a carry from bit3, otherwise reset
+    /// N: Reset
+    /// CY: Set if there is a carry from bit7, otherwise reset
+    fn add_u8_to_A(&mut self, value: u8) {
+        let (result, overflowing) = self.registers.a.overflowing_add(value);
+        let half_carry = false; //TODO
 
         self.registers.write8(Register8::A, result);
+
+        // Z: Set if the result is 0, otherwise reset
+        self.registers.f.set(FlagsRegister::ZERO, result == 0);
+
+        // H: Set if there is a carry from bit3; otherwise reset
+        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+
+        // N: Reset
+        self.registers.f.set(FlagsRegister::SUBTRACT, false);
+
+        // CY: Set if there is a carry from bit7; otherwise reset
+        self.registers.f.set(FlagsRegister::CARRY, overflowing);
+    }
+
+    /// Adds to the 8-bit register A, the 8-bit of data represented by source, and stores the result
+    /// back into register A.
+    /// Source can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
+    /// The Flag register is affected as follows:
+    /// Z: Set if the result of the addition is 0, otherwise reset
+    /// H: Set if there is a carry from bit3, otherwise reset
+    /// N: Reset
+    /// CY: Set if there is a carry from bit7, otherwise reset
+    fn add8(&mut self, source: &Source8) {
+        let value = self.get_source8(source);
+        self.add_u8_to_A(value);
+    }
+
+    /// Adds to the 8-bit register A, the carry flag and the 8-bit of data represented by source, and stores the
+    /// result back into register A.
+    /// Source can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
+    /// The Flag register is affected as follows:
+    /// Z: Set if the result of the addition is 0, otherwise reset
+    /// H: Set if there is a carry from bit3, otherwise reset
+    /// N: Reset
+    /// CY: Set if there is a carry from bit7, otherwise reset
+    fn adc8(&mut self, source: &Source8) {
+        let carry = self.registers.f.from_bits_truncate(FlagsRegister::CARRY);
+        let value = self.get_source8(source);
+        self.add_u8_to_A(carry + value);
+    }
+
+    /// Substracts from the 8-bit register A, the 8-bit value represented by source and stores the
+    /// result back into register A
+    /// Source can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
+    /// The Flag register is affected as follows:
+    /// Z: Set if the result is 0, otherwise reset
+    /// H: Set if there is a borrow from bit4, otherwise reset
+    /// N: Set
+    /// CY: Set if there is a borrow, otherwise reset
+    fn sub(&mut self, source: &Source8) {
+        todo!();
     }
     /// Jump to the absolute address speicified by the 16-bit operand, depending on the condition
     /// Reads the 16-bit operand from immediate memory
@@ -233,6 +283,7 @@ impl Cpu {
             Source16::HL => self.registers.read16(Register16::HL),
             Source16::SP => self.sp,
             Source16::Imm16 => self.read_imm16(),
+            Source16::Imm8 => todo!(),
         }
     }
     fn load16(&mut self, destination: &Target16, source: &Source16) {
@@ -250,7 +301,7 @@ impl Cpu {
     }
 
     fn push(&mut self, target: &Register16) {
-        let value = self.registers.read16(target);
+        let value = self.registers.read16(target.clone());
         let [lo, hi] = u16::to_le_bytes(value);
 
         self.sp.wrapping_sub(1);
@@ -266,7 +317,8 @@ impl Cpu {
         let hi = self.memory.read8(self.sp);
         self.sp.wrapping_add(1);
 
-        self.registers.write16(target, u16::from_le_bytes([lo, hi]));
+        self.registers
+            .write16(target.clone(), u16::from_le_bytes([lo, hi]));
     }
 
     //TODO:
@@ -297,5 +349,61 @@ impl Cpu {
                 todo!();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn should_get_value_from_source() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: FlagsRegister::empty(),
+                h: 6,
+                l: 7,
+            },
+            sp: 0,
+            pc: 0,
+            state: State::RUNNING,
+            memory: Memory::new(vec![0; 10]),
+        };
+        assert_eq!(cpu.get_source8(&Source8::A), 1);
+        assert_eq!(cpu.get_source8(&Source8::B), 2);
+        assert_eq!(cpu.get_source8(&Source8::C), 3);
+        assert_eq!(cpu.get_source8(&Source8::D), 4);
+        assert_eq!(cpu.get_source8(&Source8::E), 5);
+        assert_eq!(cpu.get_source8(&Source8::H), 6);
+        assert_eq!(cpu.get_source8(&Source8::L), 7);
+        //TODO: check Imm8
+    }
+    #[test]
+    fn should_read_addr_source() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: FlagsRegister::empty(),
+                h: 6,
+                l: 7,
+            },
+            sp: 0,
+            pc: 0,
+            state: State::RUNNING,
+            memory: Memory::new(vec![8; 10]),
+        };
+        assert_eq!(cpu.get_address(&At::BC), 0x0203);
+        assert_eq!(cpu.get_address(&At::HL), 0x0607);
+        assert_eq!(cpu.get_address(&At::DE), 0x0405);
+        assert_eq!(cpu.get_address(&At::C), 0xFF03);
+        assert_eq!(cpu.get_address(&At::Imm8), 0xFF08);
     }
 }

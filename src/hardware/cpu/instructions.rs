@@ -2417,7 +2417,7 @@ pub enum Source16 {
     HL,
     SP,
     Imm16,
-    //Imm8,
+    Imm8,
 }
 
 pub enum Bit {
