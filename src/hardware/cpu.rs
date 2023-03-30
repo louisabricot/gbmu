@@ -1,9 +1,10 @@
-use self::registers::flags::FlagsRegister;
-use self::registers::{Register16, Register8, Registers};
+use self::registers::flags::Flags;
+use self::registers::{Register16, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
     At, Condition, Instruction, Opcode, Operation, Source16, Source8, Target16, Target8,
 };
+use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
 #[allow(dead_code)]
 pub mod instructions;
@@ -16,11 +17,10 @@ pub struct Cpu {
     memory: Memory,
 }
 
-#[derive(Debug)]
 pub enum State {
-    RUNNING,
-    HALT,
-    INTERRUPT,
+    Running,
+    Halt,
+    Interrupt,
 }
 
 impl Cpu {
@@ -32,7 +32,7 @@ impl Cpu {
             registers: Registers::new(),
             pc: 0,
             sp: 0,
-            state: State::RUNNING,
+            state: State::Running,
             memory,
         }
     }
@@ -41,8 +41,8 @@ impl Cpu {
     /// Update PC
     fn read_imm8(&mut self) -> u8 {
         let addr = self.pc;
-        self.pc = u16::wrapping_add(self.pc, 1);
-        return self.memory.read8(addr);
+        self.pc = self.pc.wrapping_add(1);
+        self.memory.read8(addr)
     }
 
     /// Read the next 16 bits from memory
@@ -69,17 +69,17 @@ impl Cpu {
         match &instruction.operation {
             // 8-bit load instructions
             Operation::Load8(dst, src) => {
-                self.loadSource(dst, src);
+                self.load8(dst, src);
             }
 
             // TODO: clean code because super redundant
             Operation::Load8Dec(dst, src) => {
-                self.loadSource(dst, src);
+                self.load8(dst, src);
                 let hl = self.registers.read16(Register16::HL);
                 self.registers.write16(Register16::HL, hl - 1);
             }
             Operation::Load8Inc(dst, src) => {
-                self.loadSource(dst, src);
+                self.load8(dst, src);
                 let hl = self.registers.read16(Register16::HL);
                 self.registers.write16(Register16::HL, hl + 1);
             }
@@ -99,14 +99,14 @@ impl Cpu {
             Operation::Or(source) => self.or(source),
             Operation::Cp(source) => self.cp(source),
             Operation::Inc8(target) => self.inc8(target),
+            Operation::Dec8(target) => self.dec8(target),
             Operation::Daa => self.daa(),
 
-            //TODO:daa, cpl
+            //TODO:cpl
 
             // 16-bit arithmetic/logic instructions
 
             //TODO: add16, inc16, dec16, loadHL
-
             // Rotate, shift and bit operations
             //TODO: Rlca, Rla, Rrca, Rra, Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
             //TODO: bit, set, res
@@ -122,10 +122,43 @@ impl Cpu {
         }
     }
 
-    fn daa() {
-       todo!() 
+    /// The DAA instruction adjusts the result of a binary addition or substraction to obtain the
+    /// Binary Coded Decimal representation.
+    /// The Flag Register is updated as follows:
+    /// C: Set if there is carry from bit7, otherwise reset
+    /// N: Not affected
+    /// H: Reset
+    /// Z: Set if the result is 0, otherwise reset
+    ///
+    fn daa(&mut self) {
+        if self.registers.f.contains(Flags::N) {
+            //SUB or SBC
+
+            if self.registers.f.contains(Flags::C) {
+                if self.registers.f.contains(Flags::H) {
+                    self.registers.a = self.registers.a.wrapping_add(0x9A);
+                } else {
+                    self.registers.a = self.registers.a.wrapping_add(0xA0);
+                }
+            } else if self.registers.f.contains(Flags::H) {
+                self.registers.a = self.registers.a.wrapping_add(0xFA);
+            }
+        } else {
+            //ADD or ADC
+            if self.registers.f.contains(Flags::H) || self.registers.a & 0x0F > 0x09 {
+                self.registers.a = self.registers.a.wrapping_add(0x06);
+            }
+
+            if self.registers.f.contains(Flags::C) || self.registers.a & 0xF0 > 0x90 {
+                self.registers.a = self.registers.a.wrapping_add(0x60);
+                self.registers.f.set(Flags::C, true);
+            }
+        }
+        self.registers.f.set(Flags::Z, self.registers.a == 0);
+        self.registers.f.set(Flags::H, false);
     }
-    fn get_target8(target: &Target8) {
+
+    fn get_target8(&mut self, target: &Target8) -> u8 {
         todo!();
     }
 
@@ -135,22 +168,20 @@ impl Cpu {
     /// N: Set
     /// H: Set if there is a carry from bit3, otherwise reset
     /// C: Not affected
-    fn dec8(target: &Target8) {
-
-        let value = self.get_target(target);
+    fn dec8(&mut self, target: &Target8) {
+        let value = self.get_target8(target);
 
         let result = value.wrapping_sub(1);
-        
+
         let half_carry = (value & 0x0F).checked_sub(1 & 0xF0).is_none();
 
-        self.registers.f.set(FlagsRegister::ZERO, result == 0);
-        
-        self.registers.f.set(FlagsRegister::SUBTRACT, true);
-        
-        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+        self.registers.f.set(Flags::Z, result == 0);
 
-        self.load8(target, result);
+        self.registers.f.set(Flags::N, true);
 
+        self.registers.f.set(Flags::H, half_carry);
+
+        self.load_u8(target, result);
     }
 
     /// Increments data represented by target
@@ -159,24 +190,24 @@ impl Cpu {
     /// N: Reset
     /// H: Set if there is a carry from bit3, otherwise reset
     /// C: Not affected
-    fn inc8(target: &Target8) {
-    
-        let value = self.get_target8(target);
-        let result = value.wrapping_add(1);
+    fn inc8(&mut self, target: &Target8) {
+        let mut value: u8 = self.get_target8(target);
+
+        value = value.wrapping_add(1);
 
         let half_carry = (value & 0x0F).checked_add(1 & 0xF0).is_none();
 
-        self.registers.f.set(FlagsRegister::ZERO, result == 0);
-        self.registers.f.set(FlagsRegister::SUBTRACT, false);
-        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+        self.registers.f.set(Flags::Z, value == 0);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, half_carry);
 
-        self.load8(target, result);
+        self.load_u8(target, value);
     }
     /// Subtracts from register A, the value represented by source, and updates flags based on the
     /// result. This instruction does not update the content of register A.
     ///
-    fn cp(source: &Source8) {
-        let value = get_source8(source);
+    fn cp(&mut self, source: &Source8) {
+        let value = self.get_source8(source);
 
         self.sub_u8(value);
     }
@@ -187,17 +218,15 @@ impl Cpu {
     /// N: Reset
     /// H: Reset
     /// C: Reset
-    fn or(source: &Source8) {
-
+    fn or(&mut self, source: &Source8) {
         let value = self.get_source8(source);
 
         self.registers.a.bitor_assign(&value);
-        
-        self.registers.f.set(FlagsRegister::ZERO, self.registers.a == 0);
-        self.registers.f.set(FlagsRegister::SUBTRACT, false);
-        self.registers.f.set(FlagsRegister::HALF_CARRY, false);
-        self.registers.f.set(FlagsRegister::CARRY, false);
-        
+
+        self.registers.f.set(Flags::Z, self.registers.a == 0);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::C, false);
     }
     /// Performs a bitwise operation XOR between register A and the value represented by source, and
     /// stores the result back into register A.
@@ -206,16 +235,16 @@ impl Cpu {
     /// N: Reset
     /// H: Reset
     /// C: Reset
-    fn xor(source: &Source8) {
+    fn xor(&mut self, source: &Source8) {
         let value = self.get_source8(source);
 
         self.registers.a.bitxor_assign(&value);
 
-        self.registers.f.set(FlagsRegister::ZERO, self.registers.a == 0);
+        self.registers.f.set(Flags::Z, self.registers.a == 0);
 
-        self.registers.f.set(FlagsRegister::SUBTRACT, false);
-        self.registers.f.set(FlagsRegister::HALF_CARRY, false);
-        self.registers.f.set(FlagsRegister::CARRY, false);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::C, false);
     }
 
     /// Performs a bitwise AND operation between register A and the value represented by source, and
@@ -225,23 +254,22 @@ impl Cpu {
     /// N: Reset
     /// H: Set
     /// C: Reset
-    fn and(source: &Source8) {
-
+    fn and(&mut self, source: &Source8) {
         let value = self.get_source8(source);
-        
+
         self.registers.a.bitand_assign(&value);
 
         // Z: Set if the result is 0, otherwise reset
-        self.registers.f.set(FlagsRegister::ZERO, self.registers.a == 0);
-        
+        self.registers.f.set(Flags::Z, self.registers.a == 0);
+
         // H: Set
-        self.registers.f.set(FlagsRegister::HALF_CARRY, true);
-        
+        self.registers.f.set(Flags::H, true);
+
         // N: Reset
-        self.registers.f.set(FlagsRegister::SUBTRACT, false);
-        
+        self.registers.f.set(Flags::N, false);
+
         // C: Reset
-        self.registers.f.set(FlagsRegister::CARRY, false);
+        self.registers.f.set(Flags::C, false);
     }
     /// Adds to the 8-bit register the 8-bit value and updates FlagRegister as follows:.
     /// Z: Set if the result of the addition is 0, otherwise reset
@@ -256,19 +284,19 @@ impl Cpu {
             .checked_add(value | 0xF0)
             .is_none();
 
-        self.registers.write8(Register8::A, result);
+        self.registers.a = result;
 
         // Z: Set if the result is 0, otherwise reset
-        self.registers.f.set(FlagsRegister::ZERO, result == 0);
+        self.registers.f.set(Flags::Z, result == 0);
 
         // H: Set if there is a carry from bit3; otherwise reset
-        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+        self.registers.f.set(Flags::H, half_carry);
 
         // N: Reset
-        self.registers.f.set(FlagsRegister::SUBTRACT, false);
+        self.registers.f.set(Flags::N, false);
 
         // CY: Set if there is a carry from bit7; otherwise reset
-        self.registers.f.set(FlagsRegister::CARRY, overflow);
+        self.registers.f.set(Flags::C, overflow);
     }
 
     /// Adds to the 8-bit register A, the 8-bit of data represented by source, and stores the result
@@ -281,7 +309,7 @@ impl Cpu {
     /// CY: Set if there is a carry from bit7, otherwise reset
     fn add8(&mut self, source: &Source8) {
         let value = self.get_source8(source);
-        self.registers.a = self.add_u8_to_A(value);
+        self.add_u8_to_A(value);
     }
 
     /// Adds to the 8-bit register A, the carry flag and the 8-bit of data represented by source, and stores the
@@ -305,7 +333,7 @@ impl Cpu {
     /// N: Set
     /// CY: Set if there is a borrow, otherwise reset
     /// TODO: Explain how the half carry is computed
-    fn sub_u8(value: u8) -> u8 {
+    fn sub_u8(&mut self, value: u8) -> u8 {
         let (result, overflow) = self.registers.a.overflowing_sub(value);
 
         let half_carry = (self.registers.a & 0x0F)
@@ -313,16 +341,16 @@ impl Cpu {
             .is_none();
 
         // Z: Set if the result is 0, otherwise reset
-        self.registers.f.set(FlagsRegister::ZERO, result == 0);
+        self.registers.f.set(Flags::Z, result == 0);
 
         // H: Set if there is a carry fromt bit3, otherwise reset
-        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+        self.registers.f.set(Flags::H, half_carry);
 
         // N: Set
-        self.registers.f.set(FlagsRegister::SUBTRACT, true);
+        self.registers.f.set(Flags::N, true);
 
         // CY: Set if there is carry from bit7, otherwise reset
-        self.registers.f.set(FlagsRegister::CARRY, overflow);
+        self.registers.f.set(Flags::C, overflow);
 
         result
     }
@@ -336,36 +364,31 @@ impl Cpu {
     /// CY: Set if there is a borrow, otherwise reset
     fn sub(&mut self, source: &Source8) {
         let value = self.get_source8(source);
-        self.registers.a = self.sub_u8_to_a(value);
+        self.registers.a = self.sub_u8(value);
     }
 
     fn sbc(&mut self, source: &Source8) {
-        let carry = self
-            .registers
-            .f
-            .from_bits_truncate(FlagsRegister::CARRY)
-            .bits();
+        let carry = self.registers.f.contains(Flags::C) as u8;
+
         let value = self.get_source8(source);
 
-        let (result, overflow) = self
-            .registers
-            .a
-            .overflowing_sub(value)
-            .overflowing_sub(carry);
+        let (result, overflow) = self.registers.a.overflowing_sub(value + carry);
 
-        self.registers.write8(Register8::A, result);
+        let half_carry = false; //TODO
+
+        self.registers.a = result;
 
         // Z: Set if the result is 0, otherwise reset
-        self.registers.f.set(FlagsRegister::ZERO, result == 0);
+        self.registers.f.set(Flags::Z, result == 0);
 
         // H: Set if there is a carry fromt bit3, otherwise reset
-        self.registers.f.set(FlagsRegister::HALF_CARRY, half_carry);
+        self.registers.f.set(Flags::H, half_carry);
 
         // N: Set
-        self.registers.f.set(FlagsRegister::SUBTRACT, true);
+        self.registers.f.set(Flags::N, true);
 
         // CY: Set if there is carry from bit7, otherwise reset
-        self.registers.f.set(FlagsRegister::CARRY, overflow);
+        self.registers.f.set(Flags::C, overflow);
     }
 
     /// Jump to the absolute address speicified by the 16-bit operand, depending on the condition
@@ -436,12 +459,12 @@ impl Cpu {
         }
     }
 
-    fn loadSource8(&mut self, destination: &Target8, source: &Source8) {
+    fn load8(&mut self, destination: &Target8, source: &Source8) {
         let value = self.get_source8(source);
-        self.load8(target, value);
+        self.load_u8(destination, value);
     }
 
-    fn load8(&mut self, destination: &Target8, value: u8) { 
+    fn load_u8(&mut self, destination: &Target8, value: u8) {
         match destination {
             Target8::A => self.registers.a = value,
             Target8::B => self.registers.b = value,
@@ -486,18 +509,18 @@ impl Cpu {
         let value = self.registers.read16(target.clone());
         let [lo, hi] = u16::to_le_bytes(value);
 
-        self.sp.wrapping_sub(1);
+        self.sp = self.sp.wrapping_sub(1);
         self.memory.write8(self.sp, hi);
-        self.sp.wrapping_sub(1);
+        self.sp = self.sp.wrapping_sub(1);
         self.memory.write8(self.sp, lo);
     }
 
     fn pop(&mut self, target: &Register16) {
-        self.sp.wrapping_add(1);
+        self.sp = self.sp.wrapping_add(1);
         let lo = self.memory.read8(self.sp);
-        self.sp.wrapping_add(1);
+        self.sp = self.sp.wrapping_add(1);
         let hi = self.memory.read8(self.sp);
-        self.sp.wrapping_add(1);
+        self.sp = self.sp.wrapping_add(1);
 
         self.registers
             .write16(target.clone(), u16::from_le_bytes([lo, hi]));
@@ -519,15 +542,15 @@ impl Cpu {
     //
     pub fn step(&mut self) {
         match self.state {
-            State::RUNNING => {
+            State::Running => {
                 let opcode = self.fetch();
                 let instruction = Cpu::decode(opcode);
                 self.execute(instruction);
             }
-            State::HALT => {
+            State::Halt => {
                 todo!();
             }
-            State::INTERRUPT => {
+            State::Interrupt => {
                 todo!();
             }
         }
@@ -546,13 +569,13 @@ mod tests {
                 c: 3,
                 d: 4,
                 e: 5,
-                f: FlagsRegister::empty(),
+                f: Flags::empty(),
                 h: 6,
                 l: 7,
             },
             sp: 0,
             pc: 0,
-            state: State::RUNNING,
+            state: State::Running,
             memory: Memory::new(vec![0; 10]),
         };
         assert_eq!(cpu.get_source8(&Source8::A), 1);
@@ -573,13 +596,13 @@ mod tests {
                 c: 3,
                 d: 4,
                 e: 5,
-                f: FlagsRegister::empty(),
+                f: Flags::empty(),
                 h: 6,
                 l: 7,
             },
             sp: 0,
             pc: 0,
-            state: State::RUNNING,
+            state: State::Running,
             memory: Memory::new(vec![8; 10]),
         };
         assert_eq!(cpu.get_address(&At::BC), 0x0203);
