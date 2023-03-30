@@ -16,6 +16,7 @@ pub struct Registers {
     pub e: u8,
     pub h: u8,
     pub l: u8,
+    pub sp: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub enum Register16 {
     BC,
     DE,
     HL,
+    SP,
 }
 
 impl Registers {
@@ -38,6 +40,7 @@ impl Registers {
             f: Flags::empty(),
             h: 0,
             l: 0,
+            sp: 0,
         }
     }
 
@@ -50,6 +53,7 @@ impl Registers {
             Register16::BC => (self.b as u16) << u8::BITS | self.c as u16,
             Register16::DE => (self.d as u16) << u8::BITS | self.e as u16,
             Register16::HL => (self.h as u16) << u8::BITS | self.l as u16,
+            Register16::SP => self.sp,
         }
     }
 
@@ -74,6 +78,7 @@ impl Registers {
                 self.h = (num >> u8::BITS) as u8;
                 self.l = num as u8;
             }
+            Register16::SP => self.sp = num,
         }
     }
 }

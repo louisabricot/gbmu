@@ -106,7 +106,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Inc_bc,
         "INC BC",
         None,
-        Operation::Inc16(Target16::BC),
+        Operation::Inc16(Register16::BC),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -148,7 +148,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Add_hl_bc,
         "ADD HL, BC",
         None,
-        Operation::Add16(Target16::HL, Source16::BC),
+        Operation::AddHL_r16(Register16::BC),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -162,7 +162,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Dec_bc,
         "DEC BC",
         None,
-        Operation::Dec16(Target16::BC),
+        Operation::Dec16(Register16::BC),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -218,7 +218,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Inc_de,
         "INC DE",
         None,
-        Operation::Inc16(Target16::DE),
+        Operation::Inc16(Register16::DE),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -260,7 +260,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Add_hl_de,
         "ADD HL, DE",
         None,
-        Operation::Add16(Target16::HL, Source16::DE),
+        Operation::AddHL_r16(Register16::DE),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -274,7 +274,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Dec_de,
         "DEC DE",
         None,
-        Operation::Dec16(Target16::DE),
+        Operation::Dec16(Register16::DE),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -330,7 +330,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Inc_hl,
         "INC HL",
         None,
-        Operation::Inc16(Target16::HL),
+        Operation::Inc16(Register16::HL),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -372,7 +372,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Add_hl_hl,
         "ADD HL, HL",
         None,
-        Operation::Add16(Target16::HL, Source16::HL),
+        Operation::AddHL_r16(Register16::HL),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -386,7 +386,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Dec_hl,
         "DEC HL",
         None,
-        Operation::Dec16(Target16::HL),
+        Operation::Dec16(Register16::HL),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -442,7 +442,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Inc_sp,
         "INC SP",
         None,
-        Operation::Inc16(Target16::SP),
+        Operation::Inc16(Register16::SP),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -484,7 +484,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Add_hl_sp,
         "ADD HL, SP",
         None,
-        Operation::Add16(Target16::HL, Source16::SP),
+        Operation::AddHL_r16(Register16::SP),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -498,7 +498,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Dec_sp,
         "DEC SP",
         None,
-        Operation::Dec16(Target16::SP),
+        Operation::Dec16(Register16::SP),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -1661,7 +1661,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Add_sp_r8,
         "ADD SP, {:#04x}",
         Some(Imm::Eight),
-        Operation::Add16(Target16::SP, Source16::Imm8),
+        Operation::AddSP_dd,
         [Clock::Sixteen, Clock::None],
     ),
     Instruction::new(
@@ -1745,7 +1745,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
         Opcode::Ld_hl_sp_r8,
         "LD HL, SP+{:#04x}",
         Some(Imm::Eight),
-        Operation::LoadHL(Source16::SP, Source16::Imm8),
+        Operation::LoadHL,
         [Clock::Twelve, Clock::None],
     ),
     Instruction::new(
@@ -2470,15 +2470,15 @@ pub enum Operation {
     Cpl,
 
     /// 16-bit Arithmetic/Logic instructions
-    Add16(Target16, Source16),
+    AddHL_r16(Register16),
 
-    Inc16(Target16),
+    Inc16(Register16),
 
-    Dec16(Target16),
+    Dec16(Register16),
 
-    //TODO: RENAME
-    LoadHL(Source16, Source16),
+    LoadHL,
 
+    AddSP_dd,
     /// Rotate and Shift instructions
     Rlca,
 
