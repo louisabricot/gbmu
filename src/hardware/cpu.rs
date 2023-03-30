@@ -101,8 +101,7 @@ impl Cpu {
             Operation::Inc8(target) => self.inc8(target),
             Operation::Dec8(target) => self.dec8(target),
             Operation::Daa => self.daa(),
-
-            //TODO:cpl
+            Operation::Cpl => self.cpl(),
 
             // 16-bit arithmetic/logic instructions
 
@@ -122,6 +121,17 @@ impl Cpu {
         }
     }
 
+    /// Flips all the bits in the 8-bit register A
+    /// The Flag Register are affected as follows:
+    /// N: Set
+    /// H: Set
+    /// C: Not affected
+    /// Z: Not affected
+    fn cpl(&mut self) {
+        self.registers.a = !self.registers.a;
+        self.registers.f.set(Flags::N, true);
+        self.registers.f.set(Flags::H, true);
+    }
     /// The DAA instruction adjusts the result of a binary addition or substraction to obtain the
     /// Binary Coded Decimal representation.
     /// The Flag Register is updated as follows:
