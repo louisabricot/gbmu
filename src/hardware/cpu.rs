@@ -12,7 +12,6 @@ pub mod registers;
 pub struct Cpu {
     registers: Registers,
     pc: u16,
-    sp: u16,
     state: State,
     memory: Memory,
 }
@@ -31,7 +30,6 @@ impl Cpu {
         Self {
             registers: Registers::new(),
             pc: 0,
-            sp: 0,
             state: State::Running,
             memory,
         }
@@ -104,9 +102,14 @@ impl Cpu {
             Operation::Cpl => self.cpl(),
 
             // 16-bit arithmetic/logic instructions
+            Operation::AddHL_r16(source) => self.addHL_r16(source),
+            Operation::Inc16(target) => self.inc16(target),
+            Operation::Dec16(target) => self.dec16(target),
+            Operation::AddSP_dd => self.addSP_dd(),
+            Operation::LoadHL => self.loadHL(),
 
-            //TODO: add16, inc16, dec16, loadHL
             // Rotate, shift and bit operations
+
             //TODO: Rlca, Rla, Rrca, Rra, Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
             //TODO: bit, set, res
             // Control Flow instruction
@@ -120,7 +123,82 @@ impl Cpu {
             _ => todo!(),
         }
     }
+    /// The 8-bit operand is added to SP and the result is stored in HL.
+    /// Flags affected:
+    /// Z: Reset
+    /// H: Set if there is a carry from bit 11, otherwise reset
+    /// N: Reset
+    /// C: Set if there is a carry from bit 15, otherwise reset
+    fn loadHL(&mut self) {
+        let value = self.read_imm8() as u16;
 
+        let (result, carry) = self.registers.sp.overflowing_add(value);
+        let half_carry = (self.registers.sp & 0x0FFF)
+            .checked_add(value | 0xF000)
+            .is_none();
+
+        self.registers.write16(Register16::HL, result);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, half_carry);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::C, carry);
+    }
+
+    /// Add to Stack Pointer the 8-bit immediate value
+    /// Flags affected:
+    /// Z: Reset
+    /// N: Reset
+    /// H: Set if there is a carry on bit7, otherwise reset
+    /// C: Set if there is a carry on bit15, otherwise reset
+    fn addSP_dd(&mut self) {
+        let value = self.read_imm8() as u16;
+
+        let (result, carry) = self.pc.overflowing_add(value);
+
+        let half_carry = (self.registers.sp & 0x0FFF)
+            .checked_add(value | 0xF000)
+            .is_none();
+        self.pc = result;
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, half_carry);
+        self.registers.f.set(Flags::C, carry);
+    }
+
+    /// Increments the contents of register pair by 1
+    /// Flags are not affected
+    fn inc16(&mut self, target: &Register16) {
+        let mut value = self.registers.read16(target.clone());
+        value = value.wrapping_add(1);
+        self.registers.write16(target.clone(), value);
+    }
+
+    /// Decrements the contents of register pair by 1
+    /// Flags are not affected
+    fn dec16(&mut self, target: &Register16) {
+        let mut value = self.registers.read16(target.clone());
+        value = value.wrapping_sub(1);
+        self.registers.write16(target.clone(), value);
+    }
+
+    /// Add to register HL, the content of the source register
+    /// The Flags are affected as follows:
+    /// Z: Not affected
+    /// H: Set if there is a carry from bit11, otherwise reset
+    /// N: Reset
+    /// C: Set if there is a carry from bit5, otherwise reset
+    fn addHL_r16(&mut self, source: &Register16) {
+        let value = self.registers.read16(source.clone());
+        let target = self.registers.read16(Register16::HL);
+
+        let (result, carry) = u16::overflowing_add(target, value);
+        let half_carry = u8::checked_add((target & 0x00FF) as u8, (value & 0x00FF) as u8).is_none();
+
+        self.registers.write16(Register16::HL, result);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, half_carry);
+        self.registers.f.set(Flags::C, carry);
+    }
     /// Flips all the bits in the 8-bit register A
     /// The Flag Register are affected as follows:
     /// N: Set
@@ -496,18 +574,22 @@ impl Cpu {
             Source16::BC => self.registers.read16(Register16::BC),
             Source16::DE => self.registers.read16(Register16::DE),
             Source16::HL => self.registers.read16(Register16::HL),
-            Source16::SP => self.sp,
+            Source16::SP => self.registers.sp,
             Source16::Imm16 => self.read_imm16(),
             Source16::Imm8 => todo!(),
         }
     }
     fn load16(&mut self, destination: &Target16, source: &Source16) {
         let value = self.get_source16(source);
+        self.load_u16(destination, value);
+    }
+
+    fn load_u16(&mut self, destination: &Target16, value: u16) {
         match destination {
             Target16::BC => self.registers.write16(Register16::BC, value),
             Target16::DE => self.registers.write16(Register16::DE, value),
             Target16::HL => self.registers.write16(Register16::HL, value),
-            Target16::SP => self.sp = value,
+            Target16::SP => self.registers.sp = value,
             Target16::Addr => {
                 let address = self.read_imm16();
                 self.memory.write16(address, value);
@@ -519,18 +601,18 @@ impl Cpu {
         let value = self.registers.read16(target.clone());
         let [lo, hi] = u16::to_le_bytes(value);
 
-        self.sp = self.sp.wrapping_sub(1);
-        self.memory.write8(self.sp, hi);
-        self.sp = self.sp.wrapping_sub(1);
-        self.memory.write8(self.sp, lo);
+        self.registers.sp = self.registers.sp.wrapping_sub(1);
+        self.memory.write8(self.registers.sp, hi);
+        self.registers.sp = self.registers.sp.wrapping_sub(1);
+        self.memory.write8(self.registers.sp, lo);
     }
 
     fn pop(&mut self, target: &Register16) {
-        self.sp = self.sp.wrapping_add(1);
-        let lo = self.memory.read8(self.sp);
-        self.sp = self.sp.wrapping_add(1);
-        let hi = self.memory.read8(self.sp);
-        self.sp = self.sp.wrapping_add(1);
+        self.registers.sp = self.registers.sp.wrapping_add(1);
+        let lo = self.memory.read8(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(1);
+        let hi = self.memory.read8(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(1);
 
         self.registers
             .write16(target.clone(), u16::from_le_bytes([lo, hi]));
