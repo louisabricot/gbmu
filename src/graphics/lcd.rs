@@ -2,7 +2,7 @@ extern crate sdl2;
 
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
+use sdl2::rect::{Point, Rect};
 use sdl2::render::{Canvas, TextureQuery};
 use sdl2::video::Window;
 use sdl2::video::WindowPos::{Centered, Positioned};
@@ -21,10 +21,14 @@ const SCREEN_HEIGHT: u32 = 144;
 /// Ratio used to render the LCD window
 const PIXEL_SIZE: u32 = 4;
 
+const JOYSTICK_TEXTURE_WIDTH: u32 = 843;
+const JOYSTICK_TEXTURE_HEIGHT: u32 = 433;
+
 /// Represent the Gameboy LCD window
 pub struct Lcd {
     canvas: Canvas<Window>,
-    _buttons: Vec<Button>,
+    joystick: Joystick,
+    buttons: Vec<Button>,
 }
 
 impl Lcd {
@@ -41,10 +45,95 @@ impl Lcd {
             .unwrap();
         window.set_position(Centered, Positioned(0));
         let canvas = window.into_canvas().build().unwrap();
-        let buttons = vec![Button::new(0, 0, 0, 0, "".to_string())];
+        let joystick = Joystick::new(&canvas);
+        let ratio_width: f32 = joystick.rect.width() as f32 / JOYSTICK_TEXTURE_WIDTH as f32;
+        let ratio_height: f32 = joystick.rect.height() as f32 / JOYSTICK_TEXTURE_HEIGHT as f32;
+        let buttons = vec![
+            Button::new(
+                // A
+                joystick.rect().x + (690.0 * ratio_width) as i32,
+                joystick.rect().y + (25.0 * ratio_height) as i32,
+                (130.0 * ratio_width) as u32,
+                (130.0 * ratio_height) as u32,
+                40,
+                "O".to_string(),
+                true,
+            ),
+            Button::new(
+                // B
+                joystick.rect().x + (540.0 * ratio_width) as i32,
+                joystick.rect().y + (95.0 * ratio_height) as i32,
+                (130.0 * ratio_width) as u32,
+                (130.0 * ratio_height) as u32,
+                40,
+                "K".to_string(),
+                true,
+            ),
+            Button::new(
+                // UP
+                joystick.rect().x + (105.0 * ratio_width) as i32,
+                joystick.rect().y + (22.0 * ratio_height) as i32,
+                (80.0 * ratio_width) as u32,
+                (80.0 * ratio_height) as u32,
+                40,
+                "W".to_string(),
+                true,
+            ),
+            Button::new(
+                // LEFT
+                joystick.rect().x + (26.0 * ratio_width) as i32,
+                joystick.rect().y + (102.0 * ratio_height) as i32,
+                (80.0 * ratio_width) as u32,
+                (80.0 * ratio_height) as u32,
+                40,
+                "A".to_string(),
+                true,
+            ),
+            Button::new(
+                // DOWN
+                joystick.rect().x + (105.0 * ratio_width) as i32,
+                joystick.rect().y + (182.0 * ratio_height) as i32,
+                (80.0 * ratio_width) as u32,
+                (80.0 * ratio_height) as u32,
+                40,
+                "S".to_string(),
+                true,
+            ),
+            Button::new(
+                // RIGHT
+                joystick.rect().x + (185.0 * ratio_width) as i32,
+                joystick.rect().y + (102.0 * ratio_height) as i32,
+                (80.0 * ratio_width) as u32,
+                (80.0 * ratio_height) as u32,
+                40,
+                "D".to_string(),
+                true,
+            ),
+            Button::new(
+                // START
+                joystick.rect().x + (220.0 * ratio_width) as i32,
+                joystick.rect().y + (320.0 * ratio_height) as i32,
+                (135.0 * ratio_width) as u32,
+                (85.0 * ratio_height) as u32,
+                30,
+                "V".to_string(),
+                false,
+            ),
+            Button::new(
+                // SELECT
+                joystick.rect().x + (380.0 * ratio_width) as i32,
+                joystick.rect().y + (320.0 * ratio_height) as i32,
+                (135.0 * ratio_width) as u32,
+                (85.0 * ratio_height) as u32,
+                30,
+                "B".to_string(),
+                false,
+            ),
+        ];
         Self {
             canvas,
-            _buttons: buttons,
+            joystick,
+            buttons,
         }
     }
 
@@ -62,27 +151,27 @@ impl Lcd {
     }
 
     // Render transparent joystick on canvas
-    pub fn render_joystick(&mut self) -> Result<(), String> {
-        self.canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
-        let layout_gameboy: &[u8] = include_bytes!("../../assets/layout_gameboy.png");
+    pub fn render_joystick(&mut self) {
+        for button in &mut self.buttons {
+            match button.draw(&mut self.canvas, None, Color::RGBA(0, 0, 0, 64)) {
+                Ok(()) => (),
+                Err(e) => println!("{}", e),
+            }
+        }
+        match self.joystick.draw(&mut self.canvas) {
+            Ok(()) => (),
+            Err(e) => println!("{}", e),
+        }
+    }
 
-        let texture_creator = self.canvas.texture_creator();
-        let mut texture = texture_creator.load_texture_bytes(layout_gameboy)?;
-        texture.set_alpha_mod(64);
-        let TextureQuery { width, height, .. } = texture.query();
-        let target = get_texture_rect(
-            0,
-            0,
-            width,
-            height,
-            self.canvas.window().size().0,
-            self.canvas.window().size().1,
-            true,
-        );
-        texture.set_blend_mode(sdl2::render::BlendMode::Blend);
+    pub fn keypress(&self, name: String) -> Option<&Button> {
+        self.buttons.iter().find(|&button| button.text().eq(&name))
+    }
 
-        self.canvas.copy(&texture, None, Some(target).unwrap())?;
-        Ok(())
+    pub fn click(&self, x: i32, y: i32) -> Option<&Button> {
+        self.buttons
+            .iter()
+            .find(|&button| button.rect().contains_point(Point::new(x, y)))
     }
 
     /// Print the actual frame into the LCD window
@@ -100,7 +189,51 @@ impl Lcd {
         self.canvas.window().size().1 / PIXEL_SIZE
     }
 
+    /// Get canvas
     pub fn canvas(&self) -> &Canvas<Window> {
         &self.canvas
+    }
+
+    /// Get the window id from canvas
+    pub fn get_window_id(&self) -> u32 {
+        self.canvas.window().id()
+    }
+}
+
+struct Joystick {
+    rect: Rect,
+}
+
+impl Joystick {
+    fn new(canvas: &Canvas<Window>) -> Self {
+        let layout_gameboy: &[u8] = include_bytes!("../../assets/layout_gameboy.png");
+
+        let texture_creator = canvas.texture_creator();
+        let texture = texture_creator.load_texture_bytes(layout_gameboy).unwrap();
+        let TextureQuery { width, height, .. } = texture.query();
+        let target = get_texture_rect(
+            0,
+            0,
+            width,
+            height,
+            canvas.window().size().0,
+            canvas.window().size().1,
+            true,
+        );
+
+        Self { rect: target }
+    }
+
+    fn rect(&self) -> &Rect {
+        &self.rect
+    }
+
+    fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
+        let layout_gameboy: &[u8] = include_bytes!("../../assets/layout_gameboy.png");
+
+        let texture_creator = canvas.texture_creator();
+        let mut texture = texture_creator.load_texture_bytes(layout_gameboy).unwrap();
+        texture.set_alpha_mod(64);
+        canvas.copy(&texture, None, Some(self.rect).unwrap())
     }
 }
