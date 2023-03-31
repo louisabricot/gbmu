@@ -6,9 +6,11 @@ use crate::hardware::cpu::instructions::{
 };
 use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
+
 #[allow(dead_code)]
 pub mod instructions;
 pub mod registers;
+
 pub struct Cpu {
     registers: Registers,
     state: State,
@@ -46,9 +48,9 @@ impl Cpu {
     /// Update PC
     /// Read imm16 takes two cycles
     fn read_imm16(&mut self) -> u16 {
-        let least = self.read_imm8();
-        let most = self.read_imm8();
-        u16::from_le_bytes([least, most])
+        let addr = self.registers.pc;
+        self.registers.pc = self.registers.pc.wrapping_add(2);
+        self.memory.read16(addr)
     }
 
     fn decode(opcode: Opcode) -> Instruction {
@@ -598,23 +600,19 @@ impl Cpu {
 
     fn push(&mut self, target: Operand16) {
         let value = self.get_operand16(target);
-        let [lo, hi] = u16::to_le_bytes(value);
 
         self.registers.sp = self.registers.sp.wrapping_sub(1);
-        self.memory.write8(self.registers.sp, hi);
+        self.memory.write16(self.registers.sp, value);
         self.registers.sp = self.registers.sp.wrapping_sub(1);
-        self.memory.write8(self.registers.sp, lo);
     }
 
     fn pop(&mut self, target: Operand16) {
         self.registers.sp = self.registers.sp.wrapping_add(1);
-        let lo = self.memory.read8(self.registers.sp);
-        self.registers.sp = self.registers.sp.wrapping_add(1);
-        let hi = self.memory.read8(self.registers.sp);
+        let value = self.memory.read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(1);
 
         self.registers
-            .write16(Registers::get_register16(target), u16::from_le_bytes([lo, hi]));
+            .write16(Registers::get_register16(target), value);
     }
 
     //TODO:
@@ -652,7 +650,7 @@ impl Cpu {
 mod tests {
     use super::*;
     #[test]
-    fn should_get_value_from_source() {
+    fn test_get_operand8() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 1,
@@ -669,17 +667,46 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![0; 10]),
         };
-        assert_eq!(cpu.get_operand8(Operand8::A), 1);
-        assert_eq!(cpu.get_operand8(Operand8::B), 2);
-        assert_eq!(cpu.get_operand8(Operand8::C), 3);
-        assert_eq!(cpu.get_operand8(Operand8::D), 4);
-        assert_eq!(cpu.get_operand8(Operand8::E), 5);
-        assert_eq!(cpu.get_operand8(Operand8::H), 6);
-        assert_eq!(cpu.get_operand8(Operand8::L), 7);
+        assert_eq!(cpu.get_operand8(Operand8::A), cpu.registers.a);
+        assert_eq!(cpu.get_operand8(Operand8::B), cpu.registers.b);
+        assert_eq!(cpu.get_operand8(Operand8::C), cpu.registers.c);
+        assert_eq!(cpu.get_operand8(Operand8::D), cpu.registers.d);
+        assert_eq!(cpu.get_operand8(Operand8::E), cpu.registers.e);
+        assert_eq!(cpu.get_operand8(Operand8::H), cpu.registers.h);
+        assert_eq!(cpu.get_operand8(Operand8::L), cpu.registers.l);
         //TODO: check Imm8
     }
+
     #[test]
-    fn should_read_addr_source() {
+    fn test_get_operand16() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 0,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![8; 10]), //TODO: fill memory with random value
+        };
+        assert_eq!(cpu.get_operand16(Operand16::AF), cpu.registers.read16(Register16::AF));
+        assert_eq!(cpu.get_operand16(Operand16::BC), cpu.registers.read16(Register16::BC));
+        assert_eq!(cpu.get_operand16(Operand16::DE), cpu.registers.read16(Register16::DE));
+        assert_eq!(cpu.get_operand16(Operand16::HL), cpu.registers.read16(Register16::HL));
+        assert_eq!(cpu.get_operand16(Operand16::SP), cpu.registers.sp);
+        assert_eq!(cpu.get_operand16(Operand16::Imm8), cpu.read_imm8() as u16);
+        assert_eq!(cpu.get_operand16(Operand16::Imm16), cpu.read_imm16());
+        assert_eq!(cpu.get_operand16(Operand16::Addr(At::HL)), cpu.get_address(At::HL));
+    }
+    
+    #[test]
+    fn test_get_address() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 1,
@@ -696,10 +723,157 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![8; 10]),
         };
-        assert_eq!(cpu.get_address(At::BC), 0x0203);
-        assert_eq!(cpu.get_address(At::HL), 0x0607);
-        assert_eq!(cpu.get_address(At::DE), 0x0405);
-        assert_eq!(cpu.get_address(At::C), 0xFF03);
-        assert_eq!(cpu.get_address(At::Imm8), 0xFF08);
+        assert_eq!(cpu.get_address(At::BC), (cpu.registers.b as u16 )<< u8::BITS | cpu.registers.c as u16);
+        assert_eq!(cpu.get_address(At::HL), (cpu.registers.h as u16) << u8::BITS | cpu.registers.l as u16);
+        assert_eq!(cpu.get_address(At::DE), (cpu.registers.d as u16) << u8::BITS | cpu.registers.e as u16);
+        assert_eq!(cpu.get_address(At::C), cpu.registers.c as u16 | 0xFF00);
+        assert_eq!(cpu.get_address(At::Imm8), cpu.read_imm8() as u16 | 0xFF00 );
     }
+
+    #[test]
+    fn test_pop() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 0,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+        };
+        cpu.pop(Operand16::BC);
+        assert_eq!(cpu.registers.read16(Register16::BC), u16::from_le_bytes([cpu.memory.read8(1), cpu.memory.read8(2)]));
+        cpu.pop(Operand16::HL);
+        assert_eq!(cpu.registers.read16(Register16::HL), u16::from_le_bytes([cpu.memory.read8(3), cpu.memory.read8(4)]));
+        cpu.pop(Operand16::DE);
+        assert_eq!(cpu.registers.read16(Register16::DE), u16::from_le_bytes([cpu.memory.read8(5), cpu.memory.read8(6)]));
+        cpu.pop(Operand16::AF);
+        assert_eq!(cpu.registers.read16(Register16::AF), u16::from_le_bytes([cpu.memory.read8(7), cpu.memory.read8(8)]) & 0xFFF0);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        cpu.push(Operand16::BC);
+        println!("{:x}", cpu.registers.read16(Register16::BC));
+        assert_eq!(cpu.registers.read16(Register16::BC), u16::from_le_bytes([cpu.memory.read8(10), cpu.memory.read8(11)]));
+        cpu.push(Operand16::HL);
+        assert_eq!(cpu.registers.read16(Register16::HL), u16::from_le_bytes([cpu.memory.read8(8), cpu.memory.read8(9)]));
+        cpu.push(Operand16::DE);
+        assert_eq!(cpu.registers.read16(Register16::DE), u16::from_le_bytes([cpu.memory.read8(6), cpu.memory.read8(7)]));
+        cpu.push(Operand16::AF);
+        assert_eq!(cpu.registers.read16(Register16::AF), u16::from_le_bytes([cpu.memory.read8(4), cpu.memory.read8(5)]));
+        
+    }
+
+    #[test]
+    fn test_load_u16() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.load_u16(Operand16::BC, cpu.memory.read16(0));
+        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(0));
+        
+        cpu.load_u16(Operand16::HL, cpu.memory.read16(1));
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(1));
+        
+        cpu.load_u16(Operand16::DE, cpu.memory.read16(2));
+        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(2));
+        
+        cpu.load_u16(Operand16::SP, cpu.memory.read16(3));
+        assert_eq!(cpu.registers.sp, cpu.memory.read16(3));
+    }
+
+    #[test]
+    #[should_panic(expected="Not a valid Operand16 for load_u16()")]   
+    fn test_load_u16_with_invalid_operand() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        cpu.load_u16(Operand16::AF, cpu.memory.read16(0));
+    }
+
+    #[test]
+    fn test_load_u8() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 0,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        cpu.load_u8(Operand8::L, cpu.memory.read8(0));
+        assert_eq!(cpu.read_imm8(), cpu.memory.read8(0));
+        
+        cpu.load_u8(Operand8::A, cpu.memory.read8(1));
+        assert_eq!(cpu.registers.a, cpu.memory.read8(1));
+        
+        cpu.load_u8(Operand8::E, cpu.registers.l);
+        assert_eq!(cpu.registers.e, cpu.registers.l);
+        
+        cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(7));
+        assert_eq!(cpu.memory.read8(10), cpu.memory.read8(7));
+    }
+
+
+    //TODO: read_imm8, read_imm16, decode, execute
+    //TODO:
 }
