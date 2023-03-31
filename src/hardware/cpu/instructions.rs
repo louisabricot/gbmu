@@ -1,6 +1,7 @@
 use crate::hardware::cpu::registers::Register16;
 
 /// Describes information about the instruction set
+#[derive(Copy, Clone)]
 pub struct Instruction {
     /// To match each Instruction with a specific opcode
     pub opcode: Opcode,
@@ -26,6 +27,7 @@ pub struct Instruction {
 }
 
 /// Enumerates the instruction speed in clock cycle
+#[derive(Copy, Clone)]
 pub enum Clock {
     None,
     Four,
@@ -37,6 +39,7 @@ pub enum Clock {
     ThirtyTwo,
 }
 
+#[derive(Copy, Clone)]
 pub enum Page0 {
     Byte0,
     Byte1,
@@ -49,6 +52,7 @@ pub enum Page0 {
 }
 
 /// Represents the two possible sizes of immediate operands: either 8-bit or 16-bit
+#[derive(Copy, Clone)]
 pub enum Imm {
     Eight,
     Sixteen,
@@ -73,14 +77,14 @@ impl Instruction {
     }
 
     /// Returns the instruction with a matching opcode
-    pub fn get_by_opcode(opcode: Opcode) -> Option<&'static Instruction> {
+    pub fn get_by_opcode(opcode: Opcode) -> Option<Instruction> {
         INSTRUCTIONS
-            .iter()
+            .into_iter()
             .find(|&instruction| instruction.opcode == opcode)
     }
 }
 /// A static array of all the instructions in the instructions set.
-static INSTRUCTIONS: &[Instruction; 324] = &[
+static INSTRUCTIONS: [Instruction; 324] = [
     Instruction::new(
         Opcode::Nop,
         "NOP",
@@ -2352,7 +2356,7 @@ static INSTRUCTIONS: &[Instruction; 324] = &[
     ),
 ];
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Condition {
     NZ,
     NC,
@@ -2361,7 +2365,7 @@ pub enum Condition {
     Always,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum At {
     HL,
     BC,
@@ -2371,7 +2375,7 @@ pub enum At {
     Imm8,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Source8 {
     A,
     B,
@@ -2384,7 +2388,7 @@ pub enum Source8 {
     Addr(At),
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Target8 {
     A,
     B,
@@ -2396,7 +2400,7 @@ pub enum Target8 {
     Addr(At),
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Target16 {
     //AF,
     BC,
@@ -2406,7 +2410,7 @@ pub enum Target16 {
     Addr,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Source16 {
     //AF,
     BC,
@@ -2417,6 +2421,7 @@ pub enum Source16 {
     Imm8,
 }
 
+#[derive(Copy, Clone)]
 pub enum Bit {
     Zero,
     One,
@@ -2429,6 +2434,7 @@ pub enum Bit {
 }
 
 /// Represents all the possible operations from the instruction set
+#[derive(Copy, Clone)]
 pub enum Operation {
     /// 8-bit load instructions
     Load8(Target8, Source8),
@@ -2542,7 +2548,7 @@ pub enum Operation {
 
 /// Lists all the GameBoy opcode both regular and CB-prefixed
 #[allow(non_camel_case_types)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Opcode {
     Nop,
     Ld_bc_d16,

@@ -32,7 +32,7 @@ impl Flags {
     /// |     C     | C = 1 |
     /// |     Z     | Z = 1 |
     ///
-    pub fn check_condition(&self, condition: &Condition) -> bool {
+    pub fn check_condition(&self, condition: Condition) -> bool {
         match condition {
             Condition::NC => !self.contains(Flags::C),
             Condition::NZ => !self.contains(Flags::Z),
