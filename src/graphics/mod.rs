@@ -15,7 +15,9 @@ use lcd::Lcd;
 pub fn render() {
     let sdl_context = sdl2::init().unwrap();
     let mut lcd = Lcd::new(&sdl_context);
-    let mut debugger = Debugger::new(&sdl_context);
+    let (mut x, y) = lcd.canvas().window().position();
+    x += lcd.canvas().window().size().0 as i32 + 10;
+    let mut debugger = Debugger::new(&sdl_context, x, y);
 
     let mut x: u32 = 0;
     let mut y: u32 = 0;

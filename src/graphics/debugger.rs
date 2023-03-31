@@ -64,11 +64,11 @@ pub struct Debugger {
 
 impl Debugger {
     /// Create a new LCD using the sdl_context given
-    pub fn new(sdl_context: &Sdl) -> Self {
+    pub fn new(sdl_context: &Sdl, x: i32, y: i32) -> Self {
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
             .window("debugger", SCREEN_WIDTH, SCREEN_HEIGHT)
-            .position_centered()
+            .position(x, y)
             .build()
             .unwrap();
         let mut canvas = window.into_canvas().build().unwrap();

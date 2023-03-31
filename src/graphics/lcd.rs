@@ -4,6 +4,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
+use sdl2::video::WindowPos::{Centered, Positioned};
 use sdl2::Sdl;
 
 /// LCD width
@@ -23,15 +24,15 @@ impl Lcd {
     /// Create a new LCD using the sdl_context given
     pub fn new(sdl_context: &Sdl) -> Self {
         let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem
+        let mut window = video_subsystem
             .window(
                 "gbmu",
                 SCREEN_WIDTH * PIXEL_SIZE,
                 SCREEN_HEIGHT * PIXEL_SIZE,
             )
-            .position_centered()
             .build()
             .unwrap();
+        window.set_position(Centered, Positioned(0));
         let canvas = window.into_canvas().build().unwrap();
         Self { canvas }
     }
@@ -62,5 +63,9 @@ impl Lcd {
     /// Get height of the LCD screen
     pub fn get_height(&self) -> u32 {
         self.canvas.window().size().1 / PIXEL_SIZE
+    }
+
+    pub fn canvas(&self) -> &Canvas<Window> {
+        &self.canvas
     }
 }
