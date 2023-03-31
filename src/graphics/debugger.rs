@@ -183,7 +183,10 @@ impl Debugger {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
-        match self.boxes[1].draw(&mut self.canvas, vec!["abc", "def", "ghi"]) {
+        match self.boxes[1].draw(
+            &mut self.canvas,
+            vec!["0xffff: LD AB, 0xdead"; self.boxes[1].get_nb_lines() as usize],
+        ) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
@@ -244,14 +247,24 @@ impl Button {
     }
 }
 
+const PADDING_TEXTBOX: u32 = 5;
+const INTERLINE_TEXTBOX: u32 = 2;
+const LINE_HEIGHT_TEXTBOX: u32 = 10;
+
 pub struct TextBox {
     rect: Rect,
+    padding: u32,
+    interline: u32,
+    line_height: u32,
 }
 
 impl TextBox {
     fn new(x: i32, y: i32, width: u32, height: u32) -> Self {
         Self {
             rect: Rect::new(x, y, width, height),
+            padding: PADDING_TEXTBOX,
+            interline: INTERLINE_TEXTBOX,
+            line_height: LINE_HEIGHT_TEXTBOX,
         }
     }
 
@@ -266,9 +279,6 @@ impl TextBox {
         let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
         let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
 
-        let padding = 5;
-        let interline = 2;
-        let line_height = 10;
         for (index, line) in lines.iter().enumerate() {
             // render a surface, and convert it to a texture bound to the canvas
             let surface = font.render(line).solid(Color::WHITE).unwrap();
@@ -277,16 +287,22 @@ impl TextBox {
                 .unwrap();
             let TextureQuery { width, height, .. } = texture.query();
             let target = get_text_rect(
-                self.rect.x() + padding,
-                self.rect.y() + (index * (line_height + interline) as usize) as i32 + padding,
+                self.rect.x() + self.padding as i32,
+                self.rect.y()
+                    + (index * (self.line_height + self.interline) as usize) as i32
+                    + self.padding as i32,
                 width,
                 height,
                 self.rect.width(),
-                line_height,
+                self.line_height,
                 false,
             );
             canvas.copy(&texture, None, Some(target).unwrap())?;
         }
         Ok(())
+    }
+
+    fn get_nb_lines(&self) -> u32 {
+        (self.rect.height() - self.padding * 2) / (self.line_height + self.interline)
     }
 }
