@@ -2,7 +2,7 @@ use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
-    At, Condition, Instruction, Opcode, Operation, Source16, Source8, Target16, Target8,
+    At, Condition, Instruction, Opcode, Operation, Operand16, Operand8,
 };
 use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
@@ -166,18 +166,18 @@ impl Cpu {
 
     /// Increments the contents of register pair by 1
     /// Flags are not affected
-    fn inc16(&mut self, target: Register16) {
-        let mut value = self.registers.read16(target);
+    fn inc16(&mut self, target: Operand16) {
+        let mut value = self.registers.read16(Registers::get_register16(target));
         value = value.wrapping_add(1);
-        self.registers.write16(target, value);
+        self.registers.write16(Registers::get_register16(target), value);
     }
 
     /// Decrements the contents of register pair by 1
     /// Flags are not affected
-    fn dec16(&mut self, target: Register16) {
-        let mut value = self.registers.read16(target);
+    fn dec16(&mut self, target: Operand16) {
+        let mut value = self.registers.read16(Registers::get_register16(target));
         value = value.wrapping_sub(1);
-        self.registers.write16(target, value);
+        self.registers.write16(Registers::get_register16(target), value);
     }
 
     /// Add to register HL, the content of the source register
@@ -186,8 +186,8 @@ impl Cpu {
     /// H: Set if there is a carry from bit11, otherwise reset
     /// N: Reset
     /// C: Set if there is a carry from bit5, otherwise reset
-    fn addHL_r16(&mut self, source: Register16) {
-        let value = self.registers.read16(source);
+    fn addHL_r16(&mut self, source: Operand16) {
+        let value = self.registers.read16(Registers::get_register16(source));
         let target = self.registers.read16(Register16::HL);
 
         let (result, carry) = u16::overflowing_add(target, value);
@@ -245,18 +245,14 @@ impl Cpu {
         self.registers.f.set(Flags::H, false);
     }
 
-    fn get_target8(&mut self, target: Target8) -> u8 {
-        todo!();
-    }
-
     /// Decrements data represented by target
     /// The Flag Register is updated as follows:
     /// Z: Set if the result is 0, otherwise reset
     /// N: Set
     /// H: Set if there is a carry from bit3, otherwise reset
     /// C: Not affected
-    fn dec8(&mut self, target: Target8) {
-        let value = self.get_target8(target);
+    fn dec8(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
 
         let result = value.wrapping_sub(1);
 
@@ -277,8 +273,8 @@ impl Cpu {
     /// N: Reset
     /// H: Set if there is a carry from bit3, otherwise reset
     /// C: Not affected
-    fn inc8(&mut self, target: Target8) {
-        let mut value: u8 = self.get_target8(target);
+    fn inc8(&mut self, target: Operand8) {
+        let mut value: u8 = self.get_operand8(target);
 
         value = value.wrapping_add(1);
 
@@ -293,8 +289,8 @@ impl Cpu {
     /// Subtracts from register A, the value represented by source, and updates flags based on the
     /// result. This instruction does not update the content of register A.
     ///
-    fn cp(&mut self, source: Source8) {
-        let value = self.get_source8(source);
+    fn cp(&mut self, source: Operand8) {
+        let value = self.get_operand8(source);
 
         self.sub_u8(value);
     }
@@ -305,8 +301,8 @@ impl Cpu {
     /// N: Reset
     /// H: Reset
     /// C: Reset
-    fn or(&mut self, source: Source8) {
-        let value = self.get_source8(source);
+    fn or(&mut self, source: Operand8) {
+        let value = self.get_operand8(source);
 
         self.registers.a.bitor_assign(&value);
 
@@ -322,8 +318,8 @@ impl Cpu {
     /// N: Reset
     /// H: Reset
     /// C: Reset
-    fn xor(&mut self, source: Source8) {
-        let value = self.get_source8(source);
+    fn xor(&mut self, source: Operand8) {
+        let value = self.get_operand8(source);
 
         self.registers.a.bitxor_assign(&value);
 
@@ -341,8 +337,8 @@ impl Cpu {
     /// N: Reset
     /// H: Set
     /// C: Reset
-    fn and(&mut self, source: Source8) {
-        let value = self.get_source8(source);
+    fn and(&mut self, source: Operand8) {
+        let value = self.get_operand8(source);
 
         self.registers.a.bitand_assign(&value);
 
@@ -388,28 +384,28 @@ impl Cpu {
 
     /// Adds to the 8-bit register A, the 8-bit of data represented by source, and stores the result
     /// back into register A.
-    /// Source can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
+    /// Operand can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
     /// The Flag register is affected as follows:
     /// Z: Set if the result of the addition is 0, otherwise reset
     /// H: Set if there is a carry from bit3, otherwise reset
     /// N: Reset
     /// CY: Set if there is a carry from bit7, otherwise reset
-    fn add8(&mut self, source: Source8) {
-        let value = self.get_source8(source);
+    fn add8(&mut self, source: Operand8) {
+        let value = self.get_operand8(source);
         self.add_u8_to_A(value);
     }
 
     /// Adds to the 8-bit register A, the carry flag and the 8-bit of data represented by source, and stores the
     /// result back into register A.
-    /// Source can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
+    /// Operand can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
     /// The Flag register is affected as follows:
     /// Z: Set if the result of the addition is 0, otherwise reset
     /// H: Set if there is a carry from bit3, otherwise reset
     /// N: Reset
     /// CY: Set if there is a carry from bit7, otherwise reset
-    fn adc8(&mut self, source: Source8) {
+    fn adc8(&mut self, source: Operand8) {
         let carry = 1; //TODO
-        let value = self.get_source8(source);
+        let value = self.get_operand8(source);
         self.add_u8_to_A(carry + value);
     }
 
@@ -443,21 +439,21 @@ impl Cpu {
     }
     /// Substracts from the 8-bit register A, the 8-bit value represented by source and stores the
     /// result back into register A
-    /// Source can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
+    /// Operand can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
     /// The Flag register is affected as follows:
     /// Z: Set if the result is 0, otherwise reset
     /// H: Set if there is a borrow from bit4, otherwise reset
     /// N: Set
     /// CY: Set if there is a borrow, otherwise reset
-    fn sub(&mut self, source: Source8) {
-        let value = self.get_source8(source);
+    fn sub(&mut self, source: Operand8) {
+        let value = self.get_operand8(source);
         self.registers.a = self.sub_u8(value);
     }
 
-    fn sbc(&mut self, source: Source8) {
+    fn sbc(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
 
-        let value = self.get_source8(source);
+        let value = self.get_operand8(source);
 
         let (result, overflow) = self.registers.a.overflowing_sub(value + carry);
 
@@ -484,14 +480,14 @@ impl Cpu {
     /// Note that the operand is read even if the condition is false
     /// Unconditional jumps are also handled by this function, their condition is of type
     /// Condition::Always
-    fn absolute_jump(&mut self, condition: Condition, source: Source16) {
+    fn absolute_jump(&mut self, condition: Condition, source: Operand16) {
         let address: u16 = match source {
-            Source16::Imm16 => self.read_imm16(),
-            Source16::HL => self.registers.read16(Register16::HL),
-            _ => panic!("Not a valid Source16 for absolute jumps"),
+            Operand16::Imm16 => self.read_imm16(),
+            Operand16::HL => self.registers.read16(Register16::HL),
+            _ => panic!("Not a valid Operand16 for absolute jumps"),
         };
 
-        /* if source == Source16::Imm16 {
+        /* if source == Operand16::Imm16 {
             address = self.read_imm16();
         } else {
             address = self.registers.read16(Register16::HL);
@@ -518,17 +514,17 @@ impl Cpu {
     }
 
     /// 8-bit load instructions
-    fn get_source8(&mut self, source: Source8) -> u8 {
+    fn get_operand8(&mut self, source: Operand8) -> u8 {
         match source {
-            Source8::A => self.registers.a,
-            Source8::B => self.registers.b,
-            Source8::C => self.registers.c,
-            Source8::D => self.registers.d,
-            Source8::E => self.registers.e,
-            Source8::H => self.registers.h,
-            Source8::L => self.registers.l,
-            Source8::Imm8 => self.read_imm8(),
-            Source8::Addr(at) => {
+            Operand8::A => self.registers.a,
+            Operand8::B => self.registers.b,
+            Operand8::C => self.registers.c,
+            Operand8::D => self.registers.d,
+            Operand8::E => self.registers.e,
+            Operand8::H => self.registers.h,
+            Operand8::L => self.registers.l,
+            Operand8::Imm8 => self.read_imm8(),
+            Operand8::Addr(at) => {
                 let address = self.get_address(at);
                 self.memory.read8(address)
             }
@@ -546,58 +542,62 @@ impl Cpu {
         }
     }
 
-    fn load8(&mut self, destination: Target8, source: Source8) {
-        let value = self.get_source8(source);
+    fn load8(&mut self, destination: Operand8, source: Operand8) {
+        let value = self.get_operand8(source);
         self.load_u8(destination, value);
     }
 
-    fn load_u8(&mut self, destination: Target8, value: u8) {
+    fn load_u8(&mut self, destination: Operand8, value: u8) {
         match destination {
-            Target8::A => self.registers.a = value,
-            Target8::B => self.registers.b = value,
-            Target8::C => self.registers.c = value,
-            Target8::D => self.registers.d = value,
-            Target8::E => self.registers.e = value,
-            Target8::H => self.registers.h = value,
-            Target8::L => self.registers.l = value,
-            Target8::Addr(at) => {
+            Operand8::A => self.registers.a = value,
+            Operand8::B => self.registers.b = value,
+            Operand8::C => self.registers.c = value,
+            Operand8::D => self.registers.d = value,
+            Operand8::E => self.registers.e = value,
+            Operand8::H => self.registers.h = value,
+            Operand8::L => self.registers.l = value,
+            Operand8::Addr(at) => {
                 let address = self.get_address(at);
                 self.memory.write8(address, value);
-            }
+            },
+            _ => panic!("Not a valid Operand8 for load_u8()"),
         }
     }
 
     /// 16-bit load instructions
-    fn get_source16(&mut self, source: Source16) -> u16 {
+    fn get_operand16(&mut self, source: Operand16) -> u16 {
         match source {
-            Source16::BC => self.registers.read16(Register16::BC),
-            Source16::DE => self.registers.read16(Register16::DE),
-            Source16::HL => self.registers.read16(Register16::HL),
-            Source16::SP => self.registers.sp,
-            Source16::Imm16 => self.read_imm16(),
-            Source16::Imm8 => todo!(),
+            Operand16::AF => self.registers.read16(Register16::AF),
+            Operand16::BC => self.registers.read16(Register16::BC),
+            Operand16::DE => self.registers.read16(Register16::DE),
+            Operand16::HL => self.registers.read16(Register16::HL),
+            Operand16::SP => self.registers.sp,
+            Operand16::Imm16 => self.read_imm16(),
+            Operand16::Imm8 => self.read_imm8() as u16,
+            Operand16::Addr(at) => self.get_address(at),
         }
     }
-    fn load16(&mut self, destination: Target16, source: Source16) {
-        let value = self.get_source16(source);
+    fn load16(&mut self, destination: Operand16, source: Operand16) {
+        let value = self.get_operand16(source);
         self.load_u16(destination, value);
     }
 
-    fn load_u16(&mut self, destination: Target16, value: u16) {
+    fn load_u16(&mut self, destination: Operand16, value: u16) {
         match destination {
-            Target16::BC => self.registers.write16(Register16::BC, value),
-            Target16::DE => self.registers.write16(Register16::DE, value),
-            Target16::HL => self.registers.write16(Register16::HL, value),
-            Target16::SP => self.registers.sp = value,
-            Target16::Addr => {
-                let address = self.read_imm16();
+            Operand16::BC => self.registers.write16(Register16::BC, value),
+            Operand16::DE => self.registers.write16(Register16::DE, value),
+            Operand16::HL => self.registers.write16(Register16::HL, value),
+            Operand16::SP => self.registers.sp = value,
+            Operand16::Addr(At) => {
+                let address = self.get_address(At);
                 self.memory.write16(address, value);
             }
+            _ => panic!("Not a valid Operand16 for load_u16()"),
         }
     }
 
-    fn push(&mut self, target: Register16) {
-        let value = self.registers.read16(target);
+    fn push(&mut self, target: Operand16) {
+        let value = self.get_operand16(target);
         let [lo, hi] = u16::to_le_bytes(value);
 
         self.registers.sp = self.registers.sp.wrapping_sub(1);
@@ -606,7 +606,7 @@ impl Cpu {
         self.memory.write8(self.registers.sp, lo);
     }
 
-    fn pop(&mut self, target: Register16) {
+    fn pop(&mut self, target: Operand16) {
         self.registers.sp = self.registers.sp.wrapping_add(1);
         let lo = self.memory.read8(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(1);
@@ -614,7 +614,7 @@ impl Cpu {
         self.registers.sp = self.registers.sp.wrapping_add(1);
 
         self.registers
-            .write16(target, u16::from_le_bytes([lo, hi]));
+            .write16(Registers::get_register16(target), u16::from_le_bytes([lo, hi]));
     }
 
     //TODO:
@@ -669,13 +669,13 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![0; 10]),
         };
-        assert_eq!(cpu.get_source8(Source8::A), 1);
-        assert_eq!(cpu.get_source8(Source8::B), 2);
-        assert_eq!(cpu.get_source8(Source8::C), 3);
-        assert_eq!(cpu.get_source8(Source8::D), 4);
-        assert_eq!(cpu.get_source8(Source8::E), 5);
-        assert_eq!(cpu.get_source8(Source8::H), 6);
-        assert_eq!(cpu.get_source8(Source8::L), 7);
+        assert_eq!(cpu.get_operand8(Operand8::A), 1);
+        assert_eq!(cpu.get_operand8(Operand8::B), 2);
+        assert_eq!(cpu.get_operand8(Operand8::C), 3);
+        assert_eq!(cpu.get_operand8(Operand8::D), 4);
+        assert_eq!(cpu.get_operand8(Operand8::E), 5);
+        assert_eq!(cpu.get_operand8(Operand8::H), 6);
+        assert_eq!(cpu.get_operand8(Operand8::L), 7);
         //TODO: check Imm8
     }
     #[test]

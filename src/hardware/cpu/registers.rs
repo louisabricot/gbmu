@@ -1,4 +1,5 @@
 use crate::hardware::cpu::registers::flags::Flags;
+use crate::hardware::cpu::instructions::Operand16;
 
 pub mod flags;
 
@@ -26,8 +27,6 @@ pub enum Register16 {
     BC,
     DE,
     HL,
-    SP,
-    PC,
 }
 
 impl Registers {
@@ -56,7 +55,6 @@ impl Registers {
             Register16::BC => (self.b as u16) << u8::BITS | self.c as u16,
             Register16::DE => (self.d as u16) << u8::BITS | self.e as u16,
             Register16::HL => (self.h as u16) << u8::BITS | self.l as u16,
-            _ => panic!("This function is useful for 8-bit register pairs only"),
         }
     }
 
@@ -81,7 +79,16 @@ impl Registers {
                 self.h = (num >> u8::BITS) as u8;
                 self.l = num as u8;
             },
-            _ => panic!("This function is useful for 8-bit register pairs only"),
+        }
+    }
+
+    pub fn get_register16(operand: Operand16) -> Register16 {
+        match operand {
+            Operand16::AF => Register16::AF,
+            Operand16::BC => Register16::BC,
+            Operand16::DE => Register16::DE,
+            Operand16::HL => Register16::HL,
+            _ => panic!("Not a pair of 8-bit registers"),
         }
     }
 }
