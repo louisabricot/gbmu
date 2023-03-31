@@ -258,7 +258,7 @@ impl Cpu {
 
         let result = value.wrapping_sub(1);
 
-        let half_carry = (value & 0x0F).checked_sub(1 & 0xF0).is_none();
+        let half_carry = (value & 0x0F).checked_sub(1).is_none();
 
         self.registers.f.set(Flags::Z, result == 0);
 
@@ -280,7 +280,7 @@ impl Cpu {
 
         value = value.wrapping_add(1);
 
-        let half_carry = (value & 0x0F).checked_add(1 & 0xF0).is_none();
+        let half_carry = (value & 0x0F).checked_add(1 | 0xF0).is_none();
 
         self.registers.f.set(Flags::Z, value == 0);
         self.registers.f.set(Flags::N, false);
@@ -422,7 +422,7 @@ impl Cpu {
         let (result, overflow) = self.registers.a.overflowing_sub(value);
 
         let half_carry = (self.registers.a & 0x0F)
-            .checked_sub(value | 0xF0)
+            .checked_sub(value & 0x0F)
             .is_none();
 
         // Z: Set if the result is 0, otherwise reset
@@ -853,7 +853,7 @@ mod tests {
                 e: 5,
                 f: Flags::empty(),
                 h: 0,
-                l: 0,
+                l: 3,
                 sp: 11,
                 pc: 0,
             },
@@ -861,19 +861,100 @@ mod tests {
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.load_u8(Operand8::L, cpu.memory.read8(0));
-        assert_eq!(cpu.read_imm8(), cpu.memory.read8(0));
+        assert_eq!(cpu.registers.l, 10);
         
         cpu.load_u8(Operand8::A, cpu.memory.read8(1));
-        assert_eq!(cpu.registers.a, cpu.memory.read8(1));
+        assert_eq!(cpu.registers.a, 255);
         
         cpu.load_u8(Operand8::E, cpu.registers.l);
         assert_eq!(cpu.registers.e, cpu.registers.l);
         
-        cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(7));
-        assert_eq!(cpu.memory.read8(10), cpu.memory.read8(7));
+        cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(4));
+        assert_eq!(cpu.memory.read8(3), 239);
     }
 
+    #[test]
+    fn test_dec8() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        
+        println!("{}", (1 | 0xF0 as u8).checked_sub(1).is_none());
+        
+        cpu.dec8(Operand8::A);
+        assert_eq!(cpu.registers.a, 0);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
 
+        cpu.dec8(Operand8::D);
+        assert_eq!(cpu.registers.d, u8::MAX);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.dec8(Operand8::Addr(At::HL));
+        assert_eq!(cpu.memory.read8(3), 238);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        
+        cpu.dec8(Operand8::E);
+        assert_eq!(cpu.registers.e, 15);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+    }
+    
+    #[test]
+    fn test_inc8() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        
+        cpu.inc8(Operand8::A);
+        assert_eq!(cpu.registers.a, 2);
+
+        cpu.inc8(Operand8::D);
+        assert_eq!(cpu.registers.d, u8::MIN);
+
+        cpu.inc8(Operand8::Addr(At::HL));
+        assert_eq!(cpu.memory.read8(3), 240);
+
+    }
+    
+    fn test_cp() {
+        
+    }
+    fn test_or() {}
+    fn test_xor() {}
+    fn test_and() {}
     //TODO: read_imm8, read_imm16, decode, execute
     //TODO:
 }
