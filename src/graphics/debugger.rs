@@ -10,6 +10,9 @@ use sdl2::Sdl;
 
 use std::include_bytes;
 
+use super::button::Button;
+use super::utils::get_texture_rect;
+
 const SPACE_SZ: u32 = 15;
 const BTN_HEIGHT: u32 = 35;
 const REG_HEIGHT: u32 = 200;
@@ -19,41 +22,6 @@ const PRG_HEIGHT: u32 = 400;
 const SCREEN_WIDTH: u32 = 300;
 /// Debugger height
 const SCREEN_HEIGHT: u32 = SPACE_SZ * 6 + BTN_HEIGHT * 3 + REG_HEIGHT + PRG_HEIGHT;
-
-/// Return a sdl2 Rect to scale text texture
-fn get_text_rect(
-    x: i32,
-    y: i32,
-    rect_width: u32,
-    rect_height: u32,
-    cons_width: u32,
-    cons_height: u32,
-    centered: bool,
-) -> Rect {
-    let wr = rect_width as f32 / cons_width as f32;
-    let hr = rect_height as f32 / cons_height as f32;
-
-    let (w, h) = if wr > 1f32 || hr > 1f32 {
-        if wr > hr {
-            // Scaling down
-            let h = (rect_height as f32 / wr) as i32;
-            (cons_width as i32, h)
-        } else {
-            // Scaling up
-            let w = (rect_width as f32 / hr) as i32;
-            (w, cons_height as i32)
-        }
-    } else {
-        (rect_width as i32, rect_height as i32)
-    };
-
-    let (cx, cy) = if centered {
-        (x + (cons_width as i32 - w) / 2, y + cons_height as i32 / 2)
-    } else {
-        (x, y)
-    };
-    Rect::new(cx as i32, cy as i32, w as u32, h as u32)
-}
 
 /// Represent the Debugger window
 pub struct Debugger {
@@ -150,7 +118,7 @@ impl Debugger {
     pub fn click(&self, x: i32, y: i32) -> Option<&Button> {
         self.buttons
             .iter()
-            .find(|&button| button.rect.contains_point(Point::new(x, y)))
+            .find(|&button| button.rect().contains_point(Point::new(x, y)))
     }
 
     /// Print the actual frame into the Debugger window
@@ -199,54 +167,6 @@ impl Debugger {
     }
 }
 
-pub struct Button {
-    rect: Rect,
-    text: String,
-}
-
-impl Button {
-    fn new(x: i32, y: i32, width: u32, height: u32, text: String) -> Self {
-        Self {
-            rect: Rect::new(x, y, width, height),
-            text,
-        }
-    }
-
-    fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
-        canvas.set_draw_color(Color::RED);
-        canvas.fill_rect(self.rect)?;
-        let ttf_context = sdl2::ttf::init().unwrap();
-        let texture_creator = canvas.texture_creator();
-
-        // Load a font
-        let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
-        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
-
-        // render a surface, and convert it to a texture bound to the canvas
-        let line_height = 15;
-        let surface = font.render(self.text.as_str()).solid(Color::WHITE).unwrap();
-        let texture = texture_creator
-            .create_texture_from_surface(&surface)
-            .unwrap();
-        let TextureQuery { width, height, .. } = texture.query();
-        let target = get_text_rect(
-            self.rect.x(),
-            self.rect.y(),
-            width,
-            height,
-            self.rect.width(),
-            line_height,
-            true,
-        );
-        canvas.copy(&texture, None, Some(target).unwrap())?;
-        Ok(())
-    }
-
-    pub fn action(&self) {
-        println!("{}", self.text);
-    }
-}
-
 const PADDING_TEXTBOX: u32 = 5;
 const INTERLINE_TEXTBOX: u32 = 2;
 const LINE_HEIGHT_TEXTBOX: u32 = 10;
@@ -286,7 +206,7 @@ impl TextBox {
                 .create_texture_from_surface(&surface)
                 .unwrap();
             let TextureQuery { width, height, .. } = texture.query();
-            let target = get_text_rect(
+            let target = get_texture_rect(
                 self.rect.x() + self.padding as i32,
                 self.rect.y()
                     + (index * (self.line_height + self.interline) as usize) as i32

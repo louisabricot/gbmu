@@ -6,8 +6,10 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
+mod button;
 mod debugger;
 mod lcd;
+mod utils;
 
 use debugger::Debugger;
 use lcd::Lcd;
@@ -32,7 +34,12 @@ pub fn render() {
         }
     }
 
+    match lcd.render_joystick() {
+        Ok(()) => (),
+        Err(e) => println!("{}", e),
+    }
     lcd.print_frame();
+
     debugger.print_frame();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
