@@ -25,7 +25,7 @@ jobs:
       - name: Update Ubuntu package lists
         run: sudo apt update -y 
       - name: Install sdl2 dependencies
-        run: sudo apt install libsdl2-dev libsdl2-ttf-dev
+        run: sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
       - name: Install unzip
         run: sudo apt install unzip
       - name: Install toolchain

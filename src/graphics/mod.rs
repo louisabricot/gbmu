@@ -34,10 +34,7 @@ pub fn render() {
         }
     }
 
-    match lcd.render_joystick() {
-        Ok(()) => (),
-        Err(e) => println!("{}", e),
-    }
+    lcd.render_joystick();
     lcd.print_frame();
 
     debugger.print_frame();
@@ -51,11 +48,20 @@ pub fn render() {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown { keycode, .. } => {
+                    if let Some(button) = lcd.keypress(keycode.unwrap().name()) {
+                        button.action()
+                    }
+                }
                 Event::MouseButtonDown {
                     window_id, x, y, ..
                 } => {
                     if debugger.get_window_id() == window_id {
                         if let Some(button) = debugger.click(x, y) {
+                            button.action()
+                        }
+                    } else if lcd.get_window_id() == window_id {
+                        if let Some(button) = lcd.click(x, y) {
                             button.action()
                         }
                     }

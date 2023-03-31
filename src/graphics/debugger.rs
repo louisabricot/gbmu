@@ -59,7 +59,9 @@ impl Debugger {
                 y as i32,
                 btn_width,
                 btn_height,
+                10,
                 labels[i as usize].to_string(),
+                true,
             ));
         }
 
@@ -91,7 +93,9 @@ impl Debugger {
                 y as i32,
                 btn_width,
                 btn_height,
+                10,
                 labels[i as usize].to_string(),
+                true,
             ));
         }
 
@@ -105,7 +109,9 @@ impl Debugger {
             y as i32,
             width,
             height,
+            10,
             "Speed".to_string(),
+            true,
         ));
 
         Self {
@@ -124,7 +130,7 @@ impl Debugger {
     /// Print the actual frame into the Debugger window
     pub fn print_frame(&mut self) {
         for button in &mut self.buttons {
-            match button.draw(&mut self.canvas) {
+            match button.draw(&mut self.canvas, Some(Color::RED), Color::WHITE) {
                 Ok(()) => (),
                 Err(e) => println!("{}", e),
             }

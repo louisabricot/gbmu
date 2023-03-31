@@ -10,21 +10,43 @@ use super::utils::get_texture_rect;
 pub struct Button {
     rect: Rect,
     text: String,
+    line_height: u32,
+    centered_text: bool,
     active: bool,
 }
 
 impl Button {
-    pub fn new(x: i32, y: i32, width: u32, height: u32, text: String) -> Self {
+    pub fn new(
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+        line_height: u32,
+        text: String,
+        centered: bool,
+    ) -> Self {
         Self {
             rect: Rect::new(x, y, width, height),
             text,
+            line_height,
+            centered_text: centered,
             active: true,
         }
     }
 
-    pub fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
-        canvas.set_draw_color(Color::RED);
-        canvas.fill_rect(self.rect)?;
+    pub fn draw(
+        &self,
+        canvas: &mut Canvas<Window>,
+        bg_color: Option<Color>,
+        font_color: Color,
+    ) -> Result<(), String> {
+        match bg_color {
+            None => (),
+            Some(color) => {
+                canvas.set_draw_color(color);
+                canvas.fill_rect(self.rect)?;
+            }
+        }
         let ttf_context = sdl2::ttf::init().unwrap();
         let texture_creator = canvas.texture_creator();
 
@@ -33,20 +55,23 @@ impl Button {
         let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
 
         // render a surface, and convert it to a texture bound to the canvas
-        let line_height = 15;
-        let surface = font.render(self.text.as_str()).solid(Color::WHITE).unwrap();
+        let surface = font.render(self.text.as_str()).solid(font_color).unwrap();
         let texture = texture_creator
             .create_texture_from_surface(&surface)
             .unwrap();
         let TextureQuery { width, height, .. } = texture.query();
+        let mut pos_y = self.rect.y();
+        if self.centered_text {
+            pos_y += (self.rect.height() as i32 - self.line_height as i32) / 2;
+        }
         let target = get_texture_rect(
             self.rect.x(),
-            self.rect.y() + (line_height / 2) as i32,
+            pos_y,
             width,
             height,
             self.rect.width(),
-            line_height,
-            true,
+            self.line_height,
+            self.centered_text,
         );
         canvas.copy(&texture, None, Some(target).unwrap())?;
         Ok(())
@@ -54,6 +79,10 @@ impl Button {
 
     pub fn rect(&self) -> &Rect {
         &self.rect
+    }
+
+    pub fn text(&self) -> &String {
+        &self.text
     }
 
     pub fn _activate(&mut self) {

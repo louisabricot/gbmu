@@ -35,5 +35,5 @@ pub fn get_texture_rect(
     } else {
         (x, y)
     };
-    Rect::new(cx as i32, cy as i32, w as u32, h as u32)
+    Rect::new(cx, cy, w as u32, h as u32)
 }
