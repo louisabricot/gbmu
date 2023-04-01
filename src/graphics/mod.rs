@@ -36,8 +36,6 @@ impl Graphics {
     }
 
     pub fn render(&mut self) {
-        self.debugger.print_frame();
-
         let mut event_pump = self.sdl_context.event_pump().unwrap();
         'running: loop {
             for event in event_pump.poll_iter() {
@@ -76,8 +74,9 @@ impl Graphics {
                     _ => {}
                 }
             }
-            std::thread::sleep(Duration::from_millis(10));
             self.lcd.print_frame();
+            self.debugger.print_frame();
+            std::thread::sleep(Duration::from_millis(10));
         }
     }
 }

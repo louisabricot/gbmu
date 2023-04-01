@@ -152,6 +152,8 @@ impl Debugger {
 
     /// Print the actual frame into the Debugger window
     pub fn print_frame(&mut self) {
+        self.canvas.set_draw_color(Color::BLACK);
+        self.canvas.clear();
         for button in &mut self.buttons {
             match button.draw(&mut self.canvas, Some(Color::RED), Color::WHITE) {
                 Ok(()) => (),
