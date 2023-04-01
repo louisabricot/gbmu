@@ -290,9 +290,12 @@ impl Cpu {
         self.load_u8(target, result);
     }
 
-    /// Subtracts from register A, the value represented by source, and updates flags based on the
-    /// result. This instruction does not update the content of register A.
-    ///
+    /// Subtracts *source* from the 8-bit register `A` without updating the content of `A`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Set   
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn cp(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
 
@@ -1101,7 +1104,7 @@ mod tests {
     fn test_cp() {
         let mut cpu = Cpu {
             registers: Registers {
-                a: 1,
+                a: 10,
                 b: 2,
                 c: 3,
                 d: 0xFF,
@@ -1117,29 +1120,30 @@ mod tests {
         };
 
         cpu.cp(Operand8::A);
-        assert_eq!(cpu.registers.a, 1);
+        assert_eq!(cpu.registers.a, 10);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
 
         cpu.cp(Operand8::D);
-        assert_eq!(cpu.registers.d, 0xFF);
+        assert_eq!(cpu.registers.a, 10);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
 
         cpu.cp(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read8(3), 239);
-        assert!(!cpu.registers.f.contains(Flags::Z));
-        assert!(cpu.registers.f.contains(Flags::N));
-        assert!(!cpu.registers.f.contains(Flags::H));
-
-        cpu.cp(Operand8::E);
-        assert_eq!(cpu.registers.e, 5);
+        assert_eq!(cpu.registers.a, 10);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.cp(Operand8::E);
+        assert_eq!(cpu.registers.a, 10);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
     }
+
     fn test_or() {}
     fn test_xor() {}
     fn test_and() {}
