@@ -279,15 +279,15 @@ impl Cpu {
     fn inc8(&mut self, target: Operand8) {
         let mut value: u8 = self.get_operand8(target);
 
-        value = value.wrapping_add(1);
+        let result = value.wrapping_add(1);
 
         let half_carry = (value & 0x0F).checked_add(1 | 0xF0).is_none();
 
-        self.registers.f.set(Flags::Z, value == 0);
+        self.registers.f.set(Flags::Z, result == 0);
         self.registers.f.set(Flags::N, false);
         self.registers.f.set(Flags::H, half_carry);
 
-        self.load_u8(target, value);
+        self.load_u8(target, result);
     }
 
     /// Subtracts from register A, the value represented by source, and updates flags based on the
@@ -1061,7 +1061,7 @@ mod tests {
                 b: 2,
                 c: 3,
                 d: 0xFF,
-                e: 5,
+                e: 15,
                 f: Flags::empty(),
                 h: 0,
                 l: 3,
@@ -1074,12 +1074,27 @@ mod tests {
 
         cpu.inc8(Operand8::A);
         assert_eq!(cpu.registers.a, 2);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
 
         cpu.inc8(Operand8::D);
-        assert_eq!(cpu.registers.d, u8::MIN);
+        assert_eq!(cpu.registers.d, 0);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
 
         cpu.inc8(Operand8::Addr(At::HL));
         assert_eq!(cpu.memory.read8(3), 240);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        
+        cpu.inc8(Operand8::E);
+        assert_eq!(cpu.registers.e, 16);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
     }
 
     #[test]
