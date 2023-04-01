@@ -985,6 +985,28 @@ mod tests {
         cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(4));
         assert_eq!(cpu.memory.read8(3), 239);
     }
+    
+    #[test]
+    #[should_panic(expected = "Not a valid Operand8 for load_u8()")]
+    fn test_load_u8_with_invalid_operand() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        cpu.load_u8(Operand8::Imm8, cpu.memory.read8(0));
+    }
 
     #[test]
     fn test_dec8() {
