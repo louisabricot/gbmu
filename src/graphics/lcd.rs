@@ -51,83 +51,107 @@ impl Lcd {
         let buttons = vec![
             Button::new(
                 // A
-                joystick.rect().x + (690.0 * ratio_width) as i32,
-                joystick.rect().y + (25.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (690.0 * ratio_width) as i32,
+                    joystick.rect().y + (25.0 * ratio_height) as i32,
+                ),
                 (130.0 * ratio_width) as u32,
                 (130.0 * ratio_height) as u32,
                 40,
                 "O".to_string(),
                 true,
+                None,
             ),
             Button::new(
                 // B
-                joystick.rect().x + (540.0 * ratio_width) as i32,
-                joystick.rect().y + (95.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (540.0 * ratio_width) as i32,
+                    joystick.rect().y + (95.0 * ratio_height) as i32,
+                ),
                 (130.0 * ratio_width) as u32,
                 (130.0 * ratio_height) as u32,
                 40,
                 "K".to_string(),
                 true,
+                None,
             ),
             Button::new(
                 // UP
-                joystick.rect().x + (105.0 * ratio_width) as i32,
-                joystick.rect().y + (22.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (105.0 * ratio_width) as i32,
+                    joystick.rect().y + (22.0 * ratio_height) as i32,
+                ),
                 (80.0 * ratio_width) as u32,
                 (80.0 * ratio_height) as u32,
                 40,
                 "W".to_string(),
                 true,
+                None,
             ),
             Button::new(
                 // LEFT
-                joystick.rect().x + (26.0 * ratio_width) as i32,
-                joystick.rect().y + (102.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (26.0 * ratio_width) as i32,
+                    joystick.rect().y + (102.0 * ratio_height) as i32,
+                ),
                 (80.0 * ratio_width) as u32,
                 (80.0 * ratio_height) as u32,
                 40,
                 "A".to_string(),
                 true,
+                None,
             ),
             Button::new(
                 // DOWN
-                joystick.rect().x + (105.0 * ratio_width) as i32,
-                joystick.rect().y + (182.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (105.0 * ratio_width) as i32,
+                    joystick.rect().y + (182.0 * ratio_height) as i32,
+                ),
                 (80.0 * ratio_width) as u32,
                 (80.0 * ratio_height) as u32,
                 40,
                 "S".to_string(),
                 true,
+                None,
             ),
             Button::new(
                 // RIGHT
-                joystick.rect().x + (185.0 * ratio_width) as i32,
-                joystick.rect().y + (102.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (185.0 * ratio_width) as i32,
+                    joystick.rect().y + (102.0 * ratio_height) as i32,
+                ),
                 (80.0 * ratio_width) as u32,
                 (80.0 * ratio_height) as u32,
                 40,
                 "D".to_string(),
                 true,
+                None,
             ),
             Button::new(
                 // START
-                joystick.rect().x + (220.0 * ratio_width) as i32,
-                joystick.rect().y + (320.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (220.0 * ratio_width) as i32,
+                    joystick.rect().y + (320.0 * ratio_height) as i32,
+                ),
                 (135.0 * ratio_width) as u32,
                 (85.0 * ratio_height) as u32,
                 30,
                 "V".to_string(),
                 false,
+                None,
             ),
             Button::new(
                 // SELECT
-                joystick.rect().x + (380.0 * ratio_width) as i32,
-                joystick.rect().y + (320.0 * ratio_height) as i32,
+                (
+                    joystick.rect().x + (380.0 * ratio_width) as i32,
+                    joystick.rect().y + (320.0 * ratio_height) as i32,
+                ),
                 (135.0 * ratio_width) as u32,
                 (85.0 * ratio_height) as u32,
                 30,
                 "B".to_string(),
                 false,
+                None,
             ),
         ];
         Self {
@@ -151,31 +175,49 @@ impl Lcd {
     }
 
     // Render transparent joystick on canvas
-    pub fn render_joystick(&mut self) {
-        for button in &mut self.buttons {
-            match button.draw(&mut self.canvas, None, Color::RGBA(0, 0, 0, 64)) {
+    fn render_joystick(&mut self) {
+        if !self.joystick.hidden() {
+            for button in &mut self.buttons {
+                match button.draw(&mut self.canvas, None, Color::RGBA(0, 0, 0, 128)) {
+                    Ok(()) => (),
+                    Err(e) => println!("{}", e),
+                }
+            }
+            match self.joystick.draw(&mut self.canvas) {
                 Ok(()) => (),
                 Err(e) => println!("{}", e),
             }
         }
-        match self.joystick.draw(&mut self.canvas) {
-            Ok(()) => (),
-            Err(e) => println!("{}", e),
-        }
     }
 
-    pub fn keypress(&self, name: String) -> Option<&Button> {
-        self.buttons.iter().find(|&button| button.text().eq(&name))
-    }
-
-    pub fn click(&self, x: i32, y: i32) -> Option<&Button> {
+    pub fn keypress(&mut self, name: String) -> Option<&mut Button> {
         self.buttons
-            .iter()
-            .find(|&button| button.rect().contains_point(Point::new(x, y)))
+            .iter_mut()
+            .find(|button| button.text().eq(&name))
+    }
+
+    pub fn click(&mut self, x: i32, y: i32) -> Option<&mut Button> {
+        self.buttons
+            .iter_mut()
+            .find(|button| button.rect().contains_point(Point::new(x, y)))
     }
 
     /// Print the actual frame into the LCD window
     pub fn print_frame(&mut self) {
+        self.canvas.clear();
+        let mut x: u32 = 0;
+        let mut y: u32 = 0;
+        while y < self.get_height() {
+            let c1: u8 = (((x * 255) / self.get_width()) % 255) as u8;
+            let c2: u8 = (((y * 255) / self.get_height()) % 255) as u8;
+            self.set_pixel(x, y, Color::RGB(c1, c2, 255 - c1));
+            x += 1;
+            if x >= self.get_width() {
+                x = 0;
+                y += 1;
+            }
+        }
+        self.render_joystick();
         self.canvas.present();
     }
 
@@ -194,14 +236,33 @@ impl Lcd {
         &self.canvas
     }
 
+    pub fn show_joystick(&mut self) {
+        self.joystick.show();
+        for button in &mut self.buttons {
+            button.activate();
+        }
+    }
+
+    pub fn hide_joystick(&mut self) {
+        self.joystick.hide();
+        for button in &mut self.buttons {
+            button.deactivate();
+        }
+    }
+
+    pub fn joystick(&self) -> &Joystick {
+        &self.joystick
+    }
+
     /// Get the window id from canvas
     pub fn get_window_id(&self) -> u32 {
         self.canvas.window().id()
     }
 }
 
-struct Joystick {
+pub struct Joystick {
     rect: Rect,
+    hidden: bool,
 }
 
 impl Joystick {
@@ -221,7 +282,22 @@ impl Joystick {
             true,
         );
 
-        Self { rect: target }
+        Self {
+            rect: target,
+            hidden: false,
+        }
+    }
+
+    pub fn hide(&mut self) {
+        self.hidden = true
+    }
+
+    pub fn show(&mut self) {
+        self.hidden = false
+    }
+
+    pub fn hidden(&self) -> bool {
+        self.hidden
     }
 
     fn rect(&self) -> &Rect {

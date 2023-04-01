@@ -6,31 +6,35 @@ use sdl2::ttf::Font;
 use sdl2::video::Window;
 
 use super::utils::get_texture_rect;
+use super::Graphics;
 
+#[derive(Clone)]
 pub struct Button {
     rect: Rect,
     text: String,
     line_height: u32,
     centered_text: bool,
     active: bool,
+    action: Option<fn(&mut Graphics)>,
 }
 
 impl Button {
     pub fn new(
-        x: i32,
-        y: i32,
+        pos: (i32, i32),
         width: u32,
         height: u32,
         line_height: u32,
         text: String,
         centered: bool,
+        action: Option<fn(&mut Graphics)>,
     ) -> Self {
         Self {
-            rect: Rect::new(x, y, width, height),
+            rect: Rect::new(pos.0, pos.1, width, height),
             text,
             line_height,
             centered_text: centered,
             active: true,
+            action,
         }
     }
 
@@ -56,9 +60,10 @@ impl Button {
 
         // render a surface, and convert it to a texture bound to the canvas
         let surface = font.render(self.text.as_str()).solid(font_color).unwrap();
-        let texture = texture_creator
+        let mut texture = texture_creator
             .create_texture_from_surface(&surface)
             .unwrap();
+        texture.set_alpha_mod(font_color.rgba().3);
         let TextureQuery { width, height, .. } = texture.query();
         let mut pos_y = self.rect.y();
         if self.centered_text {
@@ -85,17 +90,22 @@ impl Button {
         &self.text
     }
 
-    pub fn _activate(&mut self) {
+    pub fn active(&self) -> bool {
+        self.active
+    }
+
+    pub fn activate(&mut self) {
         self.active = true
     }
 
-    pub fn _deactivate(&mut self) {
+    pub fn deactivate(&mut self) {
         self.active = false
     }
 
-    pub fn action(&self) {
-        if self.active {
-            println!("{}", self.text);
+    pub fn action(&mut self, graphics: &mut Graphics) {
+        match self.action {
+            None => println!("{}", self.text),
+            Some(action) => action(graphics),
         }
     }
 }

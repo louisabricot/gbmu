@@ -1,7 +1,10 @@
 mod graphics;
 
+use graphics::Graphics;
+
 fn main() {
-    graphics::render();
+    let mut graphics: Graphics = Graphics::new();
+    graphics.render();
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@ use sdl2::Sdl;
 use std::include_bytes;
 
 use super::button::Button;
+use super::controller::toggle_overlay;
 use super::utils::get_texture_rect;
 
 const SPACE_SZ: u32 = 15;
@@ -21,7 +22,7 @@ const PRG_HEIGHT: u32 = 400;
 /// Debugger width
 const SCREEN_WIDTH: u32 = 300;
 /// Debugger height
-const SCREEN_HEIGHT: u32 = SPACE_SZ * 6 + BTN_HEIGHT * 3 + REG_HEIGHT + PRG_HEIGHT;
+const SCREEN_HEIGHT: u32 = SPACE_SZ * 7 + BTN_HEIGHT * 4 + REG_HEIGHT + PRG_HEIGHT;
 
 /// Represent the Debugger window
 pub struct Debugger {
@@ -55,26 +56,39 @@ impl Debugger {
             let x = i * btn_width + (i + 1) * SPACE_SZ;
             let y = SPACE_SZ;
             buttons.push(Button::new(
-                x as i32,
-                y as i32,
+                (x as i32, y as i32),
                 btn_width,
                 btn_height,
                 10,
                 labels[i as usize].to_string(),
                 true,
+                None,
             ));
         }
 
+        let x = SPACE_SZ;
+        let btn_width = SCREEN_WIDTH - SPACE_SZ * 2;
+        let y = SPACE_SZ * 2 + BTN_HEIGHT;
+        buttons.push(Button::new(
+            (x as i32, y as i32),
+            btn_width,
+            btn_height,
+            10,
+            "Hide - Show Overlay".to_string(),
+            true,
+            Some(toggle_overlay),
+        ));
+
         // Registers
         let x = SPACE_SZ;
-        let y = SPACE_SZ * 2 + BTN_HEIGHT;
+        let y = SPACE_SZ * 3 + BTN_HEIGHT * 2;
         let width = SCREEN_WIDTH - SPACE_SZ * 2;
         let height = REG_HEIGHT;
         boxes.push(TextBox::new(x as i32, y as i32, width, height));
 
         // Program execution
         let x = SPACE_SZ;
-        let y = SPACE_SZ * 3 + BTN_HEIGHT + REG_HEIGHT;
+        let y = SPACE_SZ * 4 + BTN_HEIGHT * 2 + REG_HEIGHT;
         let width = SCREEN_WIDTH - SPACE_SZ * 2;
         let height = PRG_HEIGHT;
         boxes.push(TextBox::new(x as i32, y as i32, width, height));
@@ -87,31 +101,31 @@ impl Debugger {
 
         for i in 0..nb_buttons {
             let x = i * btn_width + (i + 1) * SPACE_SZ;
-            let y = SPACE_SZ * 4 + BTN_HEIGHT + REG_HEIGHT + PRG_HEIGHT;
+            let y = SPACE_SZ * 5 + BTN_HEIGHT * 2 + REG_HEIGHT + PRG_HEIGHT;
             buttons.push(Button::new(
-                x as i32,
-                y as i32,
+                (x as i32, y as i32),
                 btn_width,
                 btn_height,
                 10,
                 labels[i as usize].to_string(),
                 true,
+                None,
             ));
         }
 
         // Speed slider
         let x = SPACE_SZ;
-        let y = SPACE_SZ * 5 + BTN_HEIGHT * 2 + REG_HEIGHT + PRG_HEIGHT;
+        let y = SPACE_SZ * 6 + BTN_HEIGHT * 3 + REG_HEIGHT + PRG_HEIGHT;
         let width = SCREEN_WIDTH - SPACE_SZ * 2;
         let height = BTN_HEIGHT;
         buttons.push(Button::new(
-            x as i32,
-            y as i32,
+            (x as i32, y as i32),
             width,
             height,
             10,
             "Speed".to_string(),
             true,
+            None,
         ));
 
         Self {
@@ -121,10 +135,10 @@ impl Debugger {
         }
     }
 
-    pub fn click(&self, x: i32, y: i32) -> Option<&Button> {
+    pub fn click(&mut self, x: i32, y: i32) -> Option<&mut Button> {
         self.buttons
-            .iter()
-            .find(|&button| button.rect().contains_point(Point::new(x, y)))
+            .iter_mut()
+            .find(|button| button.rect().contains_point(Point::new(x, y)))
     }
 
     /// Print the actual frame into the Debugger window
