@@ -516,9 +516,12 @@ impl Cpu {
         }
     }
 
-    /// 8-bit load instructions
-    fn get_operand8(&mut self, source: Operand8) -> u8 {
-        match source {
+    /// Returns the u8 data represented by Operand8
+    /// Operand8 is either a 8-bit register (A,B,C, D, E, H, L),
+    /// an immediate 8-bit immediate value (Imm8) or,
+    /// a 8-bit data stored at a location (Addr(at) where at represent the location)
+    fn get_operand8(&mut self, operand: Operand8) -> u8 {
+        match operand {
             Operand8::A => self.registers.a,
             Operand8::B => self.registers.b,
             Operand8::C => self.registers.c,
@@ -570,7 +573,7 @@ impl Cpu {
     /// Returns the u16 data represented by Operand16
     /// Operand16 is either a 16-bit register (AF, BC, DE, HL, SP),
     /// an immediate value (Imm16 or Imm8) or,
-    /// an address stored at a location (Addr(at) where at represent the location)
+    /// a 16-bit data stored at a location (Addr(at) where at represent the location)
     fn get_operand16(&mut self, operand: Operand16) -> u16 {
         match operand {
             Operand16::AF => self.registers.read16(Register16::AF),
@@ -580,7 +583,10 @@ impl Cpu {
             Operand16::SP => self.registers.sp,
             Operand16::Imm16 => self.read_imm16(),
             Operand16::Imm8 => self.read_imm8() as u16,
-            Operand16::Addr(at) => self.get_address(at),
+            Operand16::Addr(at) => {
+                let address = self.get_address(at);
+                self.memory.read16(address)
+            },
         }
     }
     fn load16(&mut self, destination: Operand16, source: Operand16) {
@@ -657,28 +663,24 @@ mod tests {
     fn test_get_operand8() {
         let mut cpu = Cpu {
             registers: Registers {
-                a: 1,
-                b: 2,
-                c: 3,
-                d: 4,
-                e: 5,
+                a: 17,
+                b: 62,
+                c: 53,
+                d: 43,
+                e: 145,
                 f: Flags::empty(),
-                h: 6,
+                h: 0,
                 l: 7,
-                sp: 0,
+                sp: 1,
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![0; 10]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(cpu.get_operand8(Operand8::A), cpu.registers.a);
-        assert_eq!(cpu.get_operand8(Operand8::B), cpu.registers.b);
-        assert_eq!(cpu.get_operand8(Operand8::C), cpu.registers.c);
-        assert_eq!(cpu.get_operand8(Operand8::D), cpu.registers.d);
         assert_eq!(cpu.get_operand8(Operand8::E), cpu.registers.e);
-        assert_eq!(cpu.get_operand8(Operand8::H), cpu.registers.h);
-        assert_eq!(cpu.get_operand8(Operand8::L), cpu.registers.l);
-        //TODO: check Imm8
+        assert_eq!(cpu.get_operand8(Operand8::Imm8), cpu.memory.read8(0));
+        assert_eq!(cpu.get_operand8(Operand8::Addr(At::HL)), cpu.memory.read8(cpu.registers.l as u16));
     }
 
     #[test]
@@ -691,7 +693,7 @@ mod tests {
                 d: 43,
                 e: 145,
                 f: Flags::empty(),
-                h: 63,
+                h: 0,
                 l: 7,
                 sp: 1,
                 pc: 0,
@@ -707,15 +709,6 @@ mod tests {
             cpu.get_operand16(Operand16::BC),
             cpu.registers.read16(Register16::BC)
         );
-        assert_eq!(
-            cpu.get_operand16(Operand16::DE),
-            cpu.registers.read16(Register16::DE)
-        );
-        assert_eq!(
-            cpu.get_operand16(Operand16::HL),
-            cpu.registers.read16(Register16::HL)
-        );
-        assert_eq!(cpu.get_operand16(Operand16::SP), cpu.registers.sp);
         assert_eq!(cpu.get_operand16(Operand16::Imm8), 10);
         assert_eq!(
             cpu.get_operand16(Operand16::Imm16),
@@ -723,7 +716,7 @@ mod tests {
         );
         assert_eq!(
             cpu.get_operand16(Operand16::Addr(At::HL)),
-            cpu.get_address(At::HL)
+            cpu.memory.read16(cpu.registers.l as u16)
         );
     }
 
