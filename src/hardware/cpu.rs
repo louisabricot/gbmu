@@ -831,6 +831,7 @@ mod tests {
         };
         cpu.pop(Operand16::SP);
     }
+
     #[test]
     fn test_push() {
         let mut cpu = Cpu {
@@ -869,6 +870,27 @@ mod tests {
             cpu.registers.read16(Register16::AF),
             cpu.memory.read16(4)
         );
+    }
+    #[test]
+    #[should_panic(expected = "Not a pair of 8-bit registers")]
+    fn test_push_with_invalid_operand16() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 0,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+        };
+        cpu.push(Operand16::SP);
     }
 
     #[test]
