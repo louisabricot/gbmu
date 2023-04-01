@@ -537,6 +537,12 @@ impl Cpu {
         }
     }
 
+    /// Returns a u16 stored at address At
+    /// `At` can be a 16-bit register (HL, BC, or DE),
+    /// a 16-bit immediate value (Imm16) or,
+    /// a 8-bit value (Imm8 or 8-bit register C) in which case the returned value is obtained by
+    /// setting the most significant byte to 0xFF and the least significant to the 8-bit value to
+    /// form an address in the range 0xFF00-0xFFFF
     fn get_address(&mut self, addr: At) -> u16 {
         match addr {
             At::HL => self.registers.read16(Register16::HL),
@@ -586,7 +592,7 @@ impl Cpu {
             Operand16::Addr(at) => {
                 let address = self.get_address(at);
                 self.memory.read16(address)
-            },
+            }
         }
     }
     fn load16(&mut self, destination: Operand16, source: Operand16) {
@@ -680,7 +686,10 @@ mod tests {
         assert_eq!(cpu.get_operand8(Operand8::A), cpu.registers.a);
         assert_eq!(cpu.get_operand8(Operand8::E), cpu.registers.e);
         assert_eq!(cpu.get_operand8(Operand8::Imm8), cpu.memory.read8(0));
-        assert_eq!(cpu.get_operand8(Operand8::Addr(At::HL)), cpu.memory.read8(cpu.registers.l as u16));
+        assert_eq!(
+            cpu.get_operand8(Operand8::Addr(At::HL)),
+            cpu.memory.read8(cpu.registers.l as u16)
+        );
     }
 
     #[test]
@@ -724,34 +733,30 @@ mod tests {
     fn test_get_address() {
         let mut cpu = Cpu {
             registers: Registers {
-                a: 1,
-                b: 2,
-                c: 3,
-                d: 4,
-                e: 5,
+                a: 17,
+                b: 62,
+                c: 53,
+                d: 43,
+                e: 145,
                 f: Flags::empty(),
-                h: 6,
+                h: 0,
                 l: 7,
-                sp: 0,
+                sp: 1,
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![8; 10]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(
             cpu.get_address(At::BC),
             (cpu.registers.b as u16) << u8::BITS | cpu.registers.c as u16
         );
-        assert_eq!(
-            cpu.get_address(At::HL),
-            (cpu.registers.h as u16) << u8::BITS | cpu.registers.l as u16
-        );
-        assert_eq!(
-            cpu.get_address(At::DE),
-            (cpu.registers.d as u16) << u8::BITS | cpu.registers.e as u16
-        );
         assert_eq!(cpu.get_address(At::C), cpu.registers.c as u16 | 0xFF00);
-        assert_eq!(cpu.get_address(At::Imm8), cpu.read_imm8() as u16 | 0xFF00);
+        assert_eq!(
+            cpu.get_address(At::Imm8),
+            0xFF00 | cpu.memory.read8(0) as u16
+        );
+        assert_eq!(cpu.get_address(At::Imm16), cpu.memory.read16(1));
     }
 
     #[test]
