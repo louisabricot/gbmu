@@ -618,8 +618,12 @@ impl Cpu {
         }
     }
 
-    fn push(&mut self, target: Operand16) {
-        let value = self.get_operand16(target);
+    /// Pushes to the stack memory, the 16-bit *source*.  
+    /// Before and after writing to memory, the stack pointer `sp` is decremented.  
+    /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
+    /// `Registers::get_register16()` panics.
+    fn push(&mut self, source: Operand16) {
+        let value = self.registers.read16(Registers::get_register16(source));
 
         self.registers.sp = self.registers.sp.wrapping_sub(1);
         self.memory.write16(self.registers.sp, value);
@@ -629,7 +633,7 @@ impl Cpu {
     /// Pops to the 16-bit register *target*, 16-bit of data pointed to by stack pointer `sp`.  
     /// After reading the stack memory, `sp` is incremented by 2.  
     /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
-    /// `Registers::write16()` panics.
+    /// `Registers::get_register16()` panics.
     fn pop(&mut self, target: Operand16) {
         let value = self.memory.read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
@@ -787,25 +791,46 @@ mod tests {
         cpu.pop(Operand16::BC);
         assert_eq!(
             cpu.registers.read16(Register16::BC),
-            u16::from_le_bytes([cpu.memory.read8(0), cpu.memory.read8(1)])
+            cpu.memory.read16(0),
         );
         cpu.pop(Operand16::HL);
         assert_eq!(
             cpu.registers.read16(Register16::HL),
-            u16::from_le_bytes([cpu.memory.read8(2), cpu.memory.read8(3)])
+            cpu.memory.read16(2),
         );
         cpu.pop(Operand16::DE);
         assert_eq!(
             cpu.registers.read16(Register16::DE),
-            u16::from_le_bytes([cpu.memory.read8(4), cpu.memory.read8(5)])
+            cpu.memory.read16(4),
         );
         cpu.pop(Operand16::AF);
         assert_eq!(
             cpu.registers.read16(Register16::AF),
-            u16::from_le_bytes([cpu.memory.read8(6), cpu.memory.read8(7)]) & 0xFFF0
+            cpu.memory.read16(6) & 0xFFF0,
         );
     }
-
+    
+    #[test]
+    #[should_panic(expected = "Not a pair of 8-bit registers")]
+    fn test_pop_with_invalid_operand16() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4,
+                e: 5,
+                f: Flags::empty(),
+                h: 6,
+                l: 7,
+                sp: 0,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+        };
+        cpu.pop(Operand16::SP);
+    }
     #[test]
     fn test_push() {
         let mut cpu = Cpu {
@@ -825,25 +850,24 @@ mod tests {
             memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.push(Operand16::BC);
-        println!("{:x}", cpu.registers.read16(Register16::BC));
         assert_eq!(
             cpu.registers.read16(Register16::BC),
-            u16::from_le_bytes([cpu.memory.read8(10), cpu.memory.read8(11)])
+            cpu.memory.read16(10)
         );
         cpu.push(Operand16::HL);
         assert_eq!(
             cpu.registers.read16(Register16::HL),
-            u16::from_le_bytes([cpu.memory.read8(8), cpu.memory.read8(9)])
+            cpu.memory.read16(8)
         );
         cpu.push(Operand16::DE);
         assert_eq!(
             cpu.registers.read16(Register16::DE),
-            u16::from_le_bytes([cpu.memory.read8(6), cpu.memory.read8(7)])
+            cpu.memory.read16(6)
         );
         cpu.push(Operand16::AF);
         assert_eq!(
             cpu.registers.read16(Register16::AF),
-            u16::from_le_bytes([cpu.memory.read8(4), cpu.memory.read8(5)])
+            cpu.memory.read16(4)
         );
     }
 
