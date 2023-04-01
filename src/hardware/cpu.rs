@@ -300,14 +300,15 @@ impl Cpu {
         let value = self.get_operand8(source);
 
         self.sub_u8(value);
+    
     }
-    /// Performs a bitwise operation OR between register A and the value represented by source, and
-    /// stores the result back into register A.
-    /// The Flag Register is affected as follows:
-    /// Z: Set if the result is 0, otherwise reset
-    /// N: Reset
-    /// H: Reset
-    /// C: Reset
+    /// Performs a bitwise operation OR between 8-bit register `A` and *source*, and
+    /// stores the result back into `A`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Reset  
     fn or(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
 
@@ -318,13 +319,14 @@ impl Cpu {
         self.registers.f.set(Flags::H, false);
         self.registers.f.set(Flags::C, false);
     }
-    /// Performs a bitwise operation XOR between register A and the value represented by source, and
-    /// stores the result back into register A.
-    /// The Flag Register is affected as follows:
-    /// Z: set if the result is 0, otherwise reset
-    /// N: Reset
-    /// H: Reset
-    /// C: Reset
+
+    /// Performs a bitwise operation XOR between 8-bit register `A` and *source*, and
+    /// stores the result back into `A`.
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Reset  
     fn xor(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
 
@@ -1144,8 +1146,88 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::H));
     }
 
-    fn test_or() {}
-    fn test_xor() {}
+    #[test]
+    fn test_or() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 10,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        
+        cpu.or(Operand8::A);
+        assert_eq!(cpu.registers.a, 0);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        
+        cpu.or(Operand8::E);
+        assert_eq!(cpu.registers.a, 5);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        
+        cpu.or(Operand8::H);
+        assert_eq!(cpu.registers.a, 15);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+    }
+    #[test]
+    fn test_xor() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 5,
+                b: 1,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 7,
+                l: 2,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        
+        cpu.xor(Operand8::B);
+        assert_eq!(cpu.registers.a, 4);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        
+        cpu.xor(Operand8::C);
+        assert_eq!(cpu.registers.a, 7);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        
+        cpu.xor(Operand8::H);
+        assert_eq!(cpu.registers.a, 0);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+    }
     fn test_and() {}
     //TODO: read_imm8, read_imm16, decode, execute
     //TODO:
