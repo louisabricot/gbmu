@@ -516,10 +516,10 @@ impl Cpu {
         }
     }
 
-    /// Returns the u8 data represented by Operand8
-    /// Operand8 is either a 8-bit register (A,B,C, D, E, H, L),
-    /// an immediate 8-bit immediate value (Imm8) or,
-    /// a 8-bit data stored at a location (Addr(at) where at represent the location)
+    /// Returns the 8-bit data represented by *operand*.  
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),
+    /// an 8-bit immediate data (`Imm8`) or
+    /// a 8-bit data stored at location (`Addr(at)` where `at` represent the location).
     fn get_operand8(&mut self, operand: Operand8) -> u8 {
         match operand {
             Operand8::A => self.registers.a,
@@ -537,12 +537,13 @@ impl Cpu {
         }
     }
 
-    /// Returns a u16 stored at address At
-    /// `At` can be a 16-bit register (HL, BC, or DE),
-    /// a 16-bit immediate value (Imm16) or,
-    /// a 8-bit value (Imm8 or 8-bit register C) in which case the returned value is obtained by
-    /// setting the most significant byte to 0xFF and the least significant to the 8-bit value to
-    /// form an address in the range 0xFF00-0xFFFF
+    /// Returns the 16-bit data stored at address represented by *addr*.  
+    /// `At` can be a 16-bit register (`HL`, `BC`, or `DE`),
+    /// a 16-bit immediate data (`Imm16`) or
+    /// a 8-bit data (`Imm8` or 8-bit register `C`).  
+    /// When *addr* represents an 8-bit data, the returned value is obtained by
+    /// setting the most significant byte to `0xFF` and the least significant to the 8-bit data to
+    /// form an address in the range `0xFF00-0xFFFF`.
     fn get_address(&mut self, addr: At) -> u16 {
         match addr {
             At::HL => self.registers.read16(Register16::HL),
@@ -576,10 +577,13 @@ impl Cpu {
         }
     }
 
-    /// Returns the u16 data represented by Operand16
-    /// Operand16 is either a 16-bit register (AF, BC, DE, HL, SP),
-    /// an immediate value (Imm16 or Imm8) or,
-    /// a 16-bit data stored at a location (Addr(at) where at represent the location)
+    /// Returns the 16-bit data represented by *operand*.  
+    /// `Operand16` is either a 16-bit register (`AF`, `BC`, `DE`, `HL`, `SP`),
+    /// a 16-bit or 8-bit immediate data (`Imm16` or `Imm8`) or,
+    /// the 16-bit data stored at location (`Addr(at)` where `at` represent the location).
+    /// When *operand* represents an 8-bit data, the returned value is obtained by setting the most
+    /// significant byte to `0x00` and the least significant byte to the 8-bit data to form a
+    /// 16-bit value in the range `0x0000-0x00FF`.
     fn get_operand16(&mut self, operand: Operand16) -> u16 {
         match operand {
             Operand16::AF => self.registers.read16(Register16::AF),
