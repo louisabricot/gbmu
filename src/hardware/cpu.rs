@@ -626,10 +626,13 @@ impl Cpu {
         self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
 
+    /// Pops to the 16-bit register *target*, 16-bit of data pointed to by stack pointer `sp`.  
+    /// After reading the stack memory, `sp` is incremented by 2.  
+    /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
+    /// `Registers::write16()` panics.
     fn pop(&mut self, target: Operand16) {
-        self.registers.sp = self.registers.sp.wrapping_add(1);
         let value = self.memory.read16(self.registers.sp);
-        self.registers.sp = self.registers.sp.wrapping_add(1);
+        self.registers.sp = self.registers.sp.wrapping_add(2);
 
         self.registers
             .write16(Registers::get_register16(target), value);
@@ -784,22 +787,22 @@ mod tests {
         cpu.pop(Operand16::BC);
         assert_eq!(
             cpu.registers.read16(Register16::BC),
-            u16::from_le_bytes([cpu.memory.read8(1), cpu.memory.read8(2)])
+            u16::from_le_bytes([cpu.memory.read8(0), cpu.memory.read8(1)])
         );
         cpu.pop(Operand16::HL);
         assert_eq!(
             cpu.registers.read16(Register16::HL),
-            u16::from_le_bytes([cpu.memory.read8(3), cpu.memory.read8(4)])
+            u16::from_le_bytes([cpu.memory.read8(2), cpu.memory.read8(3)])
         );
         cpu.pop(Operand16::DE);
         assert_eq!(
             cpu.registers.read16(Register16::DE),
-            u16::from_le_bytes([cpu.memory.read8(5), cpu.memory.read8(6)])
+            u16::from_le_bytes([cpu.memory.read8(4), cpu.memory.read8(5)])
         );
         cpu.pop(Operand16::AF);
         assert_eq!(
             cpu.registers.read16(Register16::AF),
-            u16::from_le_bytes([cpu.memory.read8(7), cpu.memory.read8(8)]) & 0xFFF0
+            u16::from_le_bytes([cpu.memory.read8(6), cpu.memory.read8(7)]) & 0xFFF0
         );
     }
 
