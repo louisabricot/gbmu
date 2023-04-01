@@ -2,7 +2,7 @@ extern crate sdl2;
 
 use std::time::Duration;
 
-use sdl2::event::Event;
+use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::Sdl;
 
@@ -43,6 +43,10 @@ impl Graphics {
             for event in event_pump.poll_iter() {
                 match event {
                     Event::Quit { .. }
+                    | Event::Window {
+                        win_event: WindowEvent::Close,
+                        ..
+                    }
                     | Event::KeyDown {
                         keycode: Some(Keycode::Escape),
                         ..

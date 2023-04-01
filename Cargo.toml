@@ -9,3 +9,7 @@ edition = "2021"
 version = "0.35"
 default-features = false
 features = ["ttf", "image"]
+
+[dependencies.native-dialog]
+version = "0.6.3"
+default-features = false

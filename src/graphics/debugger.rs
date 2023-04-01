@@ -11,8 +11,9 @@ use sdl2::Sdl;
 use std::include_bytes;
 
 use super::button::Button;
-use super::controller::toggle_overlay;
+use super::controller::{load_rom, toggle_overlay};
 use super::utils::get_texture_rect;
+use super::Graphics;
 
 const SPACE_SZ: u32 = 15;
 const BTN_HEIGHT: u32 = 35;
@@ -48,6 +49,7 @@ impl Debugger {
 
         // Load - Save - Reset
         let labels = vec!["Load", "Save", "Reset"];
+        let funcs: Vec<Option<fn(&mut Graphics)>> = vec![Some(load_rom), None, None];
         let nb_buttons = 3;
         let btn_width = (SCREEN_WIDTH - SPACE_SZ * (nb_buttons + 1)) / nb_buttons;
         let btn_height = BTN_HEIGHT;
@@ -62,7 +64,7 @@ impl Debugger {
                 10,
                 labels[i as usize].to_string(),
                 true,
-                None,
+                funcs[i as usize],
             ));
         }
 
@@ -79,11 +81,18 @@ impl Debugger {
             Some(toggle_overlay),
         ));
 
-        // Registers
+        // Registers 1
         let x = SPACE_SZ;
         let y = SPACE_SZ * 3 + BTN_HEIGHT * 2;
-        let width = SCREEN_WIDTH - SPACE_SZ * 2;
+        let width = (SCREEN_WIDTH - SPACE_SZ * 2) / 2;
         let height = REG_HEIGHT;
+        boxes.push(TextBox::new(x as i32, y as i32, width, height));
+
+        // Registers 2
+        let width = (SCREEN_WIDTH - SPACE_SZ * 2) / 2;
+        let height = REG_HEIGHT;
+        let x = SPACE_SZ + width;
+        let y = SPACE_SZ * 3 + BTN_HEIGHT * 2;
         boxes.push(TextBox::new(x as i32, y as i32, width, height));
 
         // Program execution
@@ -171,9 +180,13 @@ impl Debugger {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
-        match self.boxes[1].draw(
+        match self.boxes[1].draw(&mut self.canvas, vec!["F: 0b1111"]) {
+            Ok(()) => (),
+            Err(e) => println!("{}", e),
+        }
+        match self.boxes[2].draw(
             &mut self.canvas,
-            vec!["0xffff: LD AB, 0xdead"; self.boxes[1].get_nb_lines() as usize],
+            vec!["0xffff: LD AB, 0xdead"; self.boxes[2].get_nb_lines() as usize],
         ) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
