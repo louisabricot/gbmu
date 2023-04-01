@@ -248,12 +248,12 @@ impl Cpu {
         self.registers.f.set(Flags::H, false);
     }
 
-    /// Decrements the content of target by 1
-    /// The Flag Register is updated as follows:
-    /// Z: Set if the result is 0, otherwise reset
-    /// N: Set
-    /// H: Set if there is a carry from bit3, otherwise reset
-    /// C: Not affected
+    /// Decrements the content of `target` by 1.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Set  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `C`: Not affected
     fn dec8(&mut self, target: Operand8) {
         let value = self.get_operand8(target);
 
@@ -270,12 +270,12 @@ impl Cpu {
         self.load_u8(target, result);
     }
 
-    /// Increments data represented by target
-    /// The Flag Register is updated as follows:
-    /// Z: Set if the result is 0, otherwise reset
-    /// N: Reset
-    /// H: Set if there is a carry from bit3, otherwise reset
-    /// C: Not affected
+    /// Increments data represented by `target` by 1.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `C`: Not affected  
     fn inc8(&mut self, target: Operand8) {
         let mut value: u8 = self.get_operand8(target);
 
@@ -289,6 +289,7 @@ impl Cpu {
 
         self.load_u8(target, value);
     }
+
     /// Subtracts from register A, the value represented by source, and updates flags based on the
     /// result. This instruction does not update the content of register A.
     ///
