@@ -604,15 +604,19 @@ impl Cpu {
         self.load_u16(destination, value);
     }
 
-    fn load_u16(&mut self, destination: Operand16, value: u16) {
+    /// Loads the 16-bit *data* into *destination*.  
+    /// If *destination* is either the 16-bit register `BC`, `DE`, `HL`, `SP`
+    /// or an address (represented by `Addr(at)`), data is loaded.
+    /// Otherwise, the function panics.
+    fn load_u16(&mut self, destination: Operand16, data: u16) {
         match destination {
-            Operand16::BC => self.registers.write16(Register16::BC, value),
-            Operand16::DE => self.registers.write16(Register16::DE, value),
-            Operand16::HL => self.registers.write16(Register16::HL, value),
-            Operand16::SP => self.registers.sp = value,
+            Operand16::BC => self.registers.write16(Register16::BC, data),
+            Operand16::DE => self.registers.write16(Register16::DE, data),
+            Operand16::HL => self.registers.write16(Register16::HL, data),
+            Operand16::SP => self.registers.sp = data,
             Operand16::Addr(At) => {
                 let address = self.get_address(At);
-                self.memory.write16(address, value);
+                self.memory.write16(address, data);
             }
             _ => panic!("Not a valid Operand16 for load_u16()"),
         }
@@ -620,7 +624,7 @@ impl Cpu {
 
     /// Pushes to the stack memory, the 16-bit *source*.  
     /// Before and after writing to memory, the stack pointer `sp` is decremented.  
-    /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
+    /// If *source* is not one of the 16-bit registers `AF`, `BC`, `DE` or `HL`, the function
     /// `Registers::get_register16()` panics.
     fn push(&mut self, source: Operand16) {
         let value = self.registers.read16(Registers::get_register16(source));
