@@ -560,18 +560,22 @@ impl Cpu {
         self.load_u8(destination, value);
     }
 
-    fn load_u8(&mut self, destination: Operand8, value: u8) {
+    /// Loads the 8-bit *data* into *destination*.  
+    /// If *destination* is either the 8-bit register `A`, `B`, `C`, `D`, `E`, `H`, `L`
+    /// or an address (represented by `Addr(at)`), data is loaded.
+    /// Otherwise, the function panics.
+    fn load_u8(&mut self, destination: Operand8, data: u8) {
         match destination {
-            Operand8::A => self.registers.a = value,
-            Operand8::B => self.registers.b = value,
-            Operand8::C => self.registers.c = value,
-            Operand8::D => self.registers.d = value,
-            Operand8::E => self.registers.e = value,
-            Operand8::H => self.registers.h = value,
-            Operand8::L => self.registers.l = value,
+            Operand8::A => self.registers.a = data,
+            Operand8::B => self.registers.b = data,
+            Operand8::C => self.registers.c = data,
+            Operand8::D => self.registers.d = data,
+            Operand8::E => self.registers.e = data,
+            Operand8::H => self.registers.h = data,
+            Operand8::L => self.registers.l = data,
             Operand8::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.write8(address, value);
+                self.memory.write8(address, data);
             }
             _ => panic!("Not a valid Operand8 for load_u8()"),
         }
