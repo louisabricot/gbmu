@@ -2,7 +2,7 @@ use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
-    At, Condition, Instruction, Opcode, Operation, Operand16, Operand8,
+    At, Condition, Instruction, Opcode, Operand16, Operand8, Operation,
 };
 use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
@@ -65,7 +65,6 @@ impl Cpu {
     /// TODO: returns the CPU state
     fn execute(&mut self, instruction: Instruction) {
         match instruction.operation {
-            
             // 8-bit load instructions
             Operation::Load8(dst, src) => {
                 self.load8(dst, src);
@@ -171,7 +170,8 @@ impl Cpu {
     fn inc16(&mut self, target: Operand16) {
         let mut value = self.registers.read16(Registers::get_register16(target));
         value = value.wrapping_add(1);
-        self.registers.write16(Registers::get_register16(target), value);
+        self.registers
+            .write16(Registers::get_register16(target), value);
     }
 
     /// Decrements the contents of register pair by 1
@@ -179,7 +179,8 @@ impl Cpu {
     fn dec16(&mut self, target: Operand16) {
         let mut value = self.registers.read16(Registers::get_register16(target));
         value = value.wrapping_sub(1);
-        self.registers.write16(Registers::get_register16(target), value);
+        self.registers
+            .write16(Registers::get_register16(target), value);
     }
 
     /// Add to register HL, the content of the source register
@@ -247,7 +248,7 @@ impl Cpu {
         self.registers.f.set(Flags::H, false);
     }
 
-    /// Decrements data represented by target
+    /// Decrements the content of target by 1
     /// The Flag Register is updated as follows:
     /// Z: Set if the result is 0, otherwise reset
     /// N: Set
@@ -561,14 +562,17 @@ impl Cpu {
             Operand8::Addr(at) => {
                 let address = self.get_address(at);
                 self.memory.write8(address, value);
-            },
+            }
             _ => panic!("Not a valid Operand8 for load_u8()"),
         }
     }
 
-    /// 16-bit load instructions
-    fn get_operand16(&mut self, source: Operand16) -> u16 {
-        match source {
+    /// Returns the u16 data represented by Operand16
+    /// Operand16 is either a 16-bit register (AF, BC, DE, HL, SP),
+    /// an immediate value (Imm16 or Imm8) or,
+    /// an address stored at a location (Addr(at) where at represent the location)
+    fn get_operand16(&mut self, operand: Operand16) -> u16 {
+        match operand {
             Operand16::AF => self.registers.read16(Register16::AF),
             Operand16::BC => self.registers.read16(Register16::BC),
             Operand16::DE => self.registers.read16(Register16::DE),
@@ -681,30 +685,48 @@ mod tests {
     fn test_get_operand16() {
         let mut cpu = Cpu {
             registers: Registers {
-                a: 1,
-                b: 2,
-                c: 3,
-                d: 4,
-                e: 5,
+                a: 17,
+                b: 62,
+                c: 53,
+                d: 43,
+                e: 145,
                 f: Flags::empty(),
-                h: 6,
+                h: 63,
                 l: 7,
-                sp: 0,
+                sp: 1,
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![8; 10]), //TODO: fill memory with random value
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
-        assert_eq!(cpu.get_operand16(Operand16::AF), cpu.registers.read16(Register16::AF));
-        assert_eq!(cpu.get_operand16(Operand16::BC), cpu.registers.read16(Register16::BC));
-        assert_eq!(cpu.get_operand16(Operand16::DE), cpu.registers.read16(Register16::DE));
-        assert_eq!(cpu.get_operand16(Operand16::HL), cpu.registers.read16(Register16::HL));
+        assert_eq!(
+            cpu.get_operand16(Operand16::AF),
+            cpu.registers.read16(Register16::AF)
+        );
+        assert_eq!(
+            cpu.get_operand16(Operand16::BC),
+            cpu.registers.read16(Register16::BC)
+        );
+        assert_eq!(
+            cpu.get_operand16(Operand16::DE),
+            cpu.registers.read16(Register16::DE)
+        );
+        assert_eq!(
+            cpu.get_operand16(Operand16::HL),
+            cpu.registers.read16(Register16::HL)
+        );
         assert_eq!(cpu.get_operand16(Operand16::SP), cpu.registers.sp);
-        assert_eq!(cpu.get_operand16(Operand16::Imm8), cpu.read_imm8() as u16);
-        assert_eq!(cpu.get_operand16(Operand16::Imm16), cpu.read_imm16());
-        assert_eq!(cpu.get_operand16(Operand16::Addr(At::HL)), cpu.get_address(At::HL));
+        assert_eq!(cpu.get_operand16(Operand16::Imm8), 10);
+        assert_eq!(
+            cpu.get_operand16(Operand16::Imm16),
+            cpu.memory.read16(cpu.registers.pc - 2)
+        );
+        assert_eq!(
+            cpu.get_operand16(Operand16::Addr(At::HL)),
+            cpu.get_address(At::HL)
+        );
     }
-    
+
     #[test]
     fn test_get_address() {
         let mut cpu = Cpu {
@@ -723,11 +745,20 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![8; 10]),
         };
-        assert_eq!(cpu.get_address(At::BC), (cpu.registers.b as u16 )<< u8::BITS | cpu.registers.c as u16);
-        assert_eq!(cpu.get_address(At::HL), (cpu.registers.h as u16) << u8::BITS | cpu.registers.l as u16);
-        assert_eq!(cpu.get_address(At::DE), (cpu.registers.d as u16) << u8::BITS | cpu.registers.e as u16);
+        assert_eq!(
+            cpu.get_address(At::BC),
+            (cpu.registers.b as u16) << u8::BITS | cpu.registers.c as u16
+        );
+        assert_eq!(
+            cpu.get_address(At::HL),
+            (cpu.registers.h as u16) << u8::BITS | cpu.registers.l as u16
+        );
+        assert_eq!(
+            cpu.get_address(At::DE),
+            (cpu.registers.d as u16) << u8::BITS | cpu.registers.e as u16
+        );
         assert_eq!(cpu.get_address(At::C), cpu.registers.c as u16 | 0xFF00);
-        assert_eq!(cpu.get_address(At::Imm8), cpu.read_imm8() as u16 | 0xFF00 );
+        assert_eq!(cpu.get_address(At::Imm8), cpu.read_imm8() as u16 | 0xFF00);
     }
 
     #[test]
@@ -749,13 +780,25 @@ mod tests {
             memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.pop(Operand16::BC);
-        assert_eq!(cpu.registers.read16(Register16::BC), u16::from_le_bytes([cpu.memory.read8(1), cpu.memory.read8(2)]));
+        assert_eq!(
+            cpu.registers.read16(Register16::BC),
+            u16::from_le_bytes([cpu.memory.read8(1), cpu.memory.read8(2)])
+        );
         cpu.pop(Operand16::HL);
-        assert_eq!(cpu.registers.read16(Register16::HL), u16::from_le_bytes([cpu.memory.read8(3), cpu.memory.read8(4)]));
+        assert_eq!(
+            cpu.registers.read16(Register16::HL),
+            u16::from_le_bytes([cpu.memory.read8(3), cpu.memory.read8(4)])
+        );
         cpu.pop(Operand16::DE);
-        assert_eq!(cpu.registers.read16(Register16::DE), u16::from_le_bytes([cpu.memory.read8(5), cpu.memory.read8(6)]));
+        assert_eq!(
+            cpu.registers.read16(Register16::DE),
+            u16::from_le_bytes([cpu.memory.read8(5), cpu.memory.read8(6)])
+        );
         cpu.pop(Operand16::AF);
-        assert_eq!(cpu.registers.read16(Register16::AF), u16::from_le_bytes([cpu.memory.read8(7), cpu.memory.read8(8)]) & 0xFFF0);
+        assert_eq!(
+            cpu.registers.read16(Register16::AF),
+            u16::from_le_bytes([cpu.memory.read8(7), cpu.memory.read8(8)]) & 0xFFF0
+        );
     }
 
     #[test]
@@ -778,14 +821,25 @@ mod tests {
         };
         cpu.push(Operand16::BC);
         println!("{:x}", cpu.registers.read16(Register16::BC));
-        assert_eq!(cpu.registers.read16(Register16::BC), u16::from_le_bytes([cpu.memory.read8(10), cpu.memory.read8(11)]));
+        assert_eq!(
+            cpu.registers.read16(Register16::BC),
+            u16::from_le_bytes([cpu.memory.read8(10), cpu.memory.read8(11)])
+        );
         cpu.push(Operand16::HL);
-        assert_eq!(cpu.registers.read16(Register16::HL), u16::from_le_bytes([cpu.memory.read8(8), cpu.memory.read8(9)]));
+        assert_eq!(
+            cpu.registers.read16(Register16::HL),
+            u16::from_le_bytes([cpu.memory.read8(8), cpu.memory.read8(9)])
+        );
         cpu.push(Operand16::DE);
-        assert_eq!(cpu.registers.read16(Register16::DE), u16::from_le_bytes([cpu.memory.read8(6), cpu.memory.read8(7)]));
+        assert_eq!(
+            cpu.registers.read16(Register16::DE),
+            u16::from_le_bytes([cpu.memory.read8(6), cpu.memory.read8(7)])
+        );
         cpu.push(Operand16::AF);
-        assert_eq!(cpu.registers.read16(Register16::AF), u16::from_le_bytes([cpu.memory.read8(4), cpu.memory.read8(5)]));
-        
+        assert_eq!(
+            cpu.registers.read16(Register16::AF),
+            u16::from_le_bytes([cpu.memory.read8(4), cpu.memory.read8(5)])
+        );
     }
 
     #[test]
@@ -809,19 +863,19 @@ mod tests {
 
         cpu.load_u16(Operand16::BC, cpu.memory.read16(0));
         assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(0));
-        
+
         cpu.load_u16(Operand16::HL, cpu.memory.read16(1));
         assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(1));
-        
+
         cpu.load_u16(Operand16::DE, cpu.memory.read16(2));
         assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(2));
-        
+
         cpu.load_u16(Operand16::SP, cpu.memory.read16(3));
         assert_eq!(cpu.registers.sp, cpu.memory.read16(3));
     }
 
     #[test]
-    #[should_panic(expected="Not a valid Operand16 for load_u16()")]   
+    #[should_panic(expected = "Not a valid Operand16 for load_u16()")]
     fn test_load_u16_with_invalid_operand() {
         let mut cpu = Cpu {
             registers: Registers {
@@ -862,13 +916,13 @@ mod tests {
         };
         cpu.load_u8(Operand8::L, cpu.memory.read8(0));
         assert_eq!(cpu.registers.l, 10);
-        
+
         cpu.load_u8(Operand8::A, cpu.memory.read8(1));
         assert_eq!(cpu.registers.a, 255);
-        
+
         cpu.load_u8(Operand8::E, cpu.registers.l);
         assert_eq!(cpu.registers.e, cpu.registers.l);
-        
+
         cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(4));
         assert_eq!(cpu.memory.read8(3), 239);
     }
@@ -891,9 +945,7 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        
-        println!("{}", (1 | 0xF0 as u8).checked_sub(1).is_none());
-        
+
         cpu.dec8(Operand8::A);
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Z));
@@ -911,14 +963,14 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
-        
+
         cpu.dec8(Operand8::E);
         assert_eq!(cpu.registers.e, 15);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
     }
-    
+
     #[test]
     fn test_inc8() {
         let mut cpu = Cpu {
@@ -937,7 +989,7 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        
+
         cpu.inc8(Operand8::A);
         assert_eq!(cpu.registers.a, 2);
 
@@ -946,11 +998,50 @@ mod tests {
 
         cpu.inc8(Operand8::Addr(At::HL));
         assert_eq!(cpu.memory.read8(3), 240);
-
     }
-    
+
+    #[test]
     fn test_cp() {
-        
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.cp(Operand8::A);
+        assert_eq!(cpu.registers.a, 1);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+
+        cpu.cp(Operand8::D);
+        assert_eq!(cpu.registers.d, 0xFF);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.cp(Operand8::Addr(At::HL));
+        assert_eq!(cpu.memory.read8(3), 239);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+
+        cpu.cp(Operand8::E);
+        assert_eq!(cpu.registers.e, 5);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
     }
     fn test_or() {}
     fn test_xor() {}
