@@ -1,5 +1,5 @@
-use crate::hardware::cpu::registers::flags::Flags;
 use crate::hardware::cpu::instructions::Operand16;
+use crate::hardware::cpu::registers::flags::Flags;
 
 pub mod flags;
 
@@ -66,19 +66,19 @@ impl Registers {
             Register16::AF => {
                 self.a = (num >> u8::BITS) as u8;
                 self.f = Flags::from_bits_truncate(num as u8);
-            },
+            }
             Register16::BC => {
                 self.b = (num >> u8::BITS) as u8;
                 self.c = num as u8;
-            },
+            }
             Register16::DE => {
                 self.d = (num >> u8::BITS) as u8;
                 self.e = num as u8;
-            },
+            }
             Register16::HL => {
                 self.h = (num >> u8::BITS) as u8;
                 self.l = num as u8;
-            },
+            }
         }
     }
 

@@ -1,4 +1,3 @@
-
 /// Describes information about the instruction set
 #[derive(Copy, Clone)]
 pub struct Instruction {

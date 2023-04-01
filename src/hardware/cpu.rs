@@ -300,7 +300,6 @@ impl Cpu {
         let value = self.get_operand8(source);
 
         self.sub_u8(value);
-    
     }
     /// Performs a bitwise operation OR between 8-bit register `A` and *source*, and
     /// stores the result back into `A`.  
@@ -803,27 +802,18 @@ mod tests {
             memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.pop(Operand16::BC);
-        assert_eq!(
-            cpu.registers.read16(Register16::BC),
-            cpu.memory.read16(0),
-        );
+        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(0));
         cpu.pop(Operand16::HL);
-        assert_eq!(
-            cpu.registers.read16(Register16::HL),
-            cpu.memory.read16(2),
-        );
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(2));
         cpu.pop(Operand16::DE);
-        assert_eq!(
-            cpu.registers.read16(Register16::DE),
-            cpu.memory.read16(4),
-        );
+        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(4));
         cpu.pop(Operand16::AF);
         assert_eq!(
             cpu.registers.read16(Register16::AF),
             cpu.memory.read16(6) & 0xFFF0,
         );
     }
-    
+
     #[test]
     #[should_panic(expected = "Not a pair of 8-bit registers")]
     fn test_pop_with_invalid_operand16() {
@@ -865,25 +855,13 @@ mod tests {
             memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.push(Operand16::BC);
-        assert_eq!(
-            cpu.registers.read16(Register16::BC),
-            cpu.memory.read16(10)
-        );
+        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(10));
         cpu.push(Operand16::HL);
-        assert_eq!(
-            cpu.registers.read16(Register16::HL),
-            cpu.memory.read16(8)
-        );
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(8));
         cpu.push(Operand16::DE);
-        assert_eq!(
-            cpu.registers.read16(Register16::DE),
-            cpu.memory.read16(6)
-        );
+        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(6));
         cpu.push(Operand16::AF);
-        assert_eq!(
-            cpu.registers.read16(Register16::AF),
-            cpu.memory.read16(4)
-        );
+        assert_eq!(cpu.registers.read16(Register16::AF), cpu.memory.read16(4));
     }
     #[test]
     #[should_panic(expected = "Not a pair of 8-bit registers")]
@@ -991,7 +969,7 @@ mod tests {
         cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(4));
         assert_eq!(cpu.memory.read8(3), 239);
     }
-    
+
     #[test]
     #[should_panic(expected = "Not a valid Operand8 for load_u8()")]
     fn test_load_u8_with_invalid_operand() {
@@ -1094,7 +1072,7 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
-        
+
         cpu.inc8(Operand8::E);
         assert_eq!(cpu.registers.e, 16);
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -1164,28 +1142,27 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        
+
         cpu.or(Operand8::A);
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-        
+
         cpu.or(Operand8::E);
         assert_eq!(cpu.registers.a, 5);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-        
+
         cpu.or(Operand8::H);
         assert_eq!(cpu.registers.a, 15);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-
     }
     #[test]
     fn test_xor() {
@@ -1205,21 +1182,21 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        
+
         cpu.xor(Operand8::B);
         assert_eq!(cpu.registers.a, 4);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-        
+
         cpu.xor(Operand8::C);
         assert_eq!(cpu.registers.a, 7);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-        
+
         cpu.xor(Operand8::H);
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Z));
@@ -1246,21 +1223,21 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        
+
         cpu.and(Operand8::H);
         assert_eq!(cpu.registers.a, 7);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-        
+
         cpu.and(Operand8::E);
         assert_eq!(cpu.registers.a, 5);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-        
+
         cpu.and(Operand8::C);
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Z));
