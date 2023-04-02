@@ -256,10 +256,10 @@ impl Cpu {
     /// `C`: Not affected
     fn dec8(&mut self, target: Operand8) {
         let value = self.get_operand8(target);
+        
+        let half_carry = (value & 0x0F).checked_sub(1).is_none();
 
         let result = value.wrapping_sub(1);
-
-        let half_carry = (value & 0x0F).checked_sub(1).is_none();
 
         self.registers.f.set(Flags::Z, result == 0);
 
@@ -301,6 +301,7 @@ impl Cpu {
 
         self.sub_u8(value);
     }
+
     /// Performs a bitwise operation OR between 8-bit register `A` and *source*, and
     /// stores the result back into `A`.  
     /// `Flag Register` is updated as follows:  
@@ -350,109 +351,106 @@ impl Cpu {
 
         self.registers.a.bitand_assign(&value);
 
-        // Z: Set if the result is 0, otherwise reset
         self.registers.f.set(Flags::Z, self.registers.a == 0);
 
-        // H: Set
         self.registers.f.set(Flags::H, true);
 
-        // N: Reset
         self.registers.f.set(Flags::N, false);
 
-        // C: Reset
         self.registers.f.set(Flags::C, false);
     }
-    /// Adds to the 8-bit register the 8-bit value and updates FlagRegister as follows:.
-    /// Z: Set if the result of the addition is 0, otherwise reset
-    /// H: Set if there is a carry from bit3, otherwise reset
-    /// N: Reset
-    /// CY: Set if there is a carry from bit7, otherwise reset
-    /// TODO: Explain how the half carry is computed
-    fn add_u8_to_A(&mut self, value: u8) {
-        let (result, overflow) = self.registers.a.overflowing_add(value);
 
+    /// Adds *data* to the 8-bit register `A` and stores the result back into `A`.  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset
+    /// `N`: Reset
+    /// `C`: Set if there is a carry from bit7, otherwise reset
+    fn add_u8_to_A(&mut self, data: u8) {
+        let (result, overflow) = self.registers.a.overflowing_add(data);
         let half_carry = (self.registers.a & 0x0F)
-            .checked_add(value | 0xF0)
+            .checked_add(data | 0xF0)
             .is_none();
 
         self.registers.a = result;
-
-        // Z: Set if the result is 0, otherwise reset
         self.registers.f.set(Flags::Z, result == 0);
-
-        // H: Set if there is a carry from bit3; otherwise reset
         self.registers.f.set(Flags::H, half_carry);
-
-        // N: Reset
         self.registers.f.set(Flags::N, false);
-
-        // CY: Set if there is a carry from bit7; otherwise reset
         self.registers.f.set(Flags::C, overflow);
     }
+    
+    /*
+    /// Returns the 8-bit data represented by *operand*.  
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),
+    /// an 8-bit immediate data (`Imm8`) or
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).
+    */
 
-    /// Adds to the 8-bit register A, the 8-bit of data represented by source, and stores the result
-    /// back into register A.
-    /// Operand can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
-    /// The Flag register is affected as follows:
-    /// Z: Set if the result of the addition is 0, otherwise reset
-    /// H: Set if there is a carry from bit3, otherwise reset
-    /// N: Reset
-    /// CY: Set if there is a carry from bit7, otherwise reset
+    /// Adds *source* to the 8-bit register `A`, and stores the result
+    /// back into `A`.  
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
+    /// an immediate 8-bit data (`Imm8`) or  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset
+    /// `H`: Set if there is a carry from bit3, otherwise reset
+    /// `N`: Reset
+    /// `C`: Set if there is a carry from bit7, otherwise reset
     fn add8(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
         self.add_u8_to_A(value);
     }
 
-    /// Adds to the 8-bit register A, the carry flag and the 8-bit of data represented by source, and stores the
-    /// result back into register A.
-    /// Operand can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
-    /// The Flag register is affected as follows:
-    /// Z: Set if the result of the addition is 0, otherwise reset
-    /// H: Set if there is a carry from bit3, otherwise reset
-    /// N: Reset
-    /// CY: Set if there is a carry from bit7, otherwise reset
+    /// Adds *source* and the `carry flag` to the 8-bit register `A`, and stores the result
+    /// back into `A`.  
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
+    /// an immediate 8-bit data (`Imm8`) or  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset
+    /// `H`: Set if there is a carry from bit3, otherwise reset
+    /// `N`: Reset
+    /// `C`: Set if there is a carry from bit7, otherwise reset
     fn adc8(&mut self, source: Operand8) {
-        let carry = 1; //TODO
+        let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
         self.add_u8_to_A(carry + value);
     }
 
-    /// Substracts u8 value from the 8-bit register A and returns the result
-    /// The Flag register is affected as follows:
-    /// Z: Set if the result is 0, otherwise reset
-    /// H: Set if there is a borrow from bit4, otherwise reset
-    /// N: Set
-    /// CY: Set if there is a borrow, otherwise reset
-    /// TODO: Explain how the half carry is computed
-    fn sub_u8(&mut self, value: u8) -> u8 {
-        let (result, overflow) = self.registers.a.overflowing_sub(value);
+    /// Substracts the u8 data from the 8-bit register `A` and returns the result.  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `N`: Set  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
+    fn sub_u8(&mut self, data: u8) -> u8 {
+        let (result, overflow) = self.registers.a.overflowing_sub(data);
 
         let half_carry = (self.registers.a & 0x0F)
-            .checked_sub(value & 0x0F)
+            .checked_sub(data & 0x0F)
             .is_none();
 
-        // Z: Set if the result is 0, otherwise reset
         self.registers.f.set(Flags::Z, result == 0);
 
-        // H: Set if there is a carry fromt bit3, otherwise reset
         self.registers.f.set(Flags::H, half_carry);
 
-        // N: Set
         self.registers.f.set(Flags::N, true);
 
-        // CY: Set if there is carry from bit7, otherwise reset
         self.registers.f.set(Flags::C, overflow);
 
         result
     }
-    /// Substracts from the 8-bit register A, the 8-bit value represented by source and stores the
-    /// result back into register A
-    /// Operand can be an 8-bit register, an address to an 8-bit data, or an immediate 8-bit data.
-    /// The Flag register is affected as follows:
-    /// Z: Set if the result is 0, otherwise reset
-    /// H: Set if there is a borrow from bit4, otherwise reset
-    /// N: Set
-    /// CY: Set if there is a borrow, otherwise reset
+    
+    /// Substracts *source* from the 8-bit register `A` and stores the
+    /// result back into `A`.  
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
+    /// an immediate 8-bit data (`Imm8`) or  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset
+    /// `H`: Set if there is a carry from bit3, otherwise reset
+    /// `N`: Set
+    /// `C`: Set if there is a carry from bit7, otherwise reset
     fn sub(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
         self.registers.a = self.sub_u8(value);
@@ -522,9 +520,9 @@ impl Cpu {
     }
 
     /// Returns the 8-bit data represented by *operand*.  
-    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),
-    /// an 8-bit immediate data (`Imm8`) or
-    /// a 8-bit data stored at location (`Addr(at)` where `at` represent the location).
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
+    /// an 8-bit immediate data (`Imm8`) or  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).
     fn get_operand8(&mut self, operand: Operand8) -> u8 {
         match operand {
             Operand8::A => self.registers.a,
@@ -543,9 +541,9 @@ impl Cpu {
     }
 
     /// Returns the 16-bit data stored at address represented by *addr*.  
-    /// `At` can be a 16-bit register (`HL`, `BC`, or `DE`),
-    /// a 16-bit immediate data (`Imm16`) or
-    /// a 8-bit data (`Imm8` or 8-bit register `C`).  
+    /// `At` can be the 16-bit register `HL`, `BC`, or `DE`,  
+    /// a 16-bit immediate data (`Imm16`) or  
+    /// an 8-bit data (`Imm8` or 8-bit register `C`).  
     /// When *addr* represents an 8-bit data, the returned value is obtained by
     /// setting the most significant byte to `0xFF` and the least significant to the 8-bit data to
     /// form an address in the range `0xFF00-0xFFFF`.
@@ -608,16 +606,13 @@ impl Cpu {
             }
         }
     }
-    fn load16(&mut self, destination: Operand16, source: Operand16) {
-        let value = self.get_operand16(source);
-        self.load_u16(destination, value);
-    }
 
-    /// Loads the 16-bit *data* into *destination*.  
+    /// Loads the 16-bit *source* into *destination*.  
     /// If *destination* is either the 16-bit register `BC`, `DE`, `HL`, `SP`
     /// or an address (represented by `Addr(at)`), data is loaded.
     /// Otherwise, the function panics.
-    fn load_u16(&mut self, destination: Operand16, data: u16) {
+    fn load16(&mut self, destination: Operand16, source: Operand16) {
+        let data = self.get_operand16(source);
         match destination {
             Operand16::BC => self.registers.write16(Register16::BC, data),
             Operand16::DE => self.registers.write16(Register16::DE, data),
@@ -627,7 +622,7 @@ impl Cpu {
                 let address = self.get_address(At);
                 self.memory.write16(address, data);
             }
-            _ => panic!("Not a valid Operand16 for load_u16()"),
+            _ => panic!("Not a valid Operand16 for load16()"),
         }
     }
 
@@ -886,7 +881,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_u16() {
+    fn test_load16() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 1,
@@ -904,22 +899,20 @@ mod tests {
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.load_u16(Operand16::BC, cpu.memory.read16(0));
-        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(0));
+        cpu.load16(Operand16::BC, Operand16::SP);
+        assert_eq!(cpu.registers.read16(Register16::BC), cpu.registers.sp);
 
-        cpu.load_u16(Operand16::HL, cpu.memory.read16(1));
-        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(1));
+        cpu.load16(Operand16::HL, Operand16::Imm16);
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(0));
 
-        cpu.load_u16(Operand16::DE, cpu.memory.read16(2));
-        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(2));
+        cpu.load16(Operand16::DE, Operand16::Imm8);
+        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read8(2) as u16);
 
-        cpu.load_u16(Operand16::SP, cpu.memory.read16(3));
-        assert_eq!(cpu.registers.sp, cpu.memory.read16(3));
     }
 
     #[test]
-    #[should_panic(expected = "Not a valid Operand16 for load_u16()")]
-    fn test_load_u16_with_invalid_operand() {
+    #[should_panic(expected = "Not a valid Operand16 for load16()")]
+    fn test_load16_with_invalid_operand() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 1,
@@ -936,7 +929,7 @@ mod tests {
             state: State::Running,
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        cpu.load_u16(Operand16::AF, cpu.memory.read16(0));
+        cpu.load16(Operand16::AF, Operand16::AF);
     }
 
     #[test]
