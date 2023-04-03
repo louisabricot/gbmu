@@ -363,9 +363,9 @@ impl Cpu {
     /// Adds *data* to the 8-bit register `A` and stores the result back into `A`.  
     /// `FlagRegister` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Set if there is a carry from bit3, otherwise reset
-    /// `N`: Reset
-    /// `C`: Set if there is a carry from bit7, otherwise reset
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `N`: Reset  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn add_u8_to_A(&mut self, data: u8) {
         let (result, overflow) = self.registers.a.overflowing_add(data);
         let half_carry = (self.registers.a & 0x0F)
@@ -392,10 +392,10 @@ impl Cpu {
     /// an immediate 8-bit data (`Imm8`) or  
     /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset
-    /// `H`: Set if there is a carry from bit3, otherwise reset
-    /// `N`: Reset
-    /// `C`: Set if there is a carry from bit7, otherwise reset
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `N`: Reset  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn add8(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
         self.add_u8_to_A(value);
@@ -407,10 +407,10 @@ impl Cpu {
     /// an immediate 8-bit data (`Imm8`) or  
     /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset
-    /// `H`: Set if there is a carry from bit3, otherwise reset
-    /// `N`: Reset
-    /// `C`: Set if there is a carry from bit7, otherwise reset
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `N`: Reset  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn adc8(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
@@ -1332,5 +1332,131 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
+    }
+    #[test]
+    fn test_add_u8_to_A() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 10,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.add_u8_to_A(2);
+        assert_eq!(cpu.registers.a, 12);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+
+
+        cpu.add_u8_to_A(0xff);
+        assert_eq!(cpu.registers.a, 11);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));        
+        
+        cpu.registers.a = 0;
+        cpu.add_u8_to_A(0);
+        assert_eq!(cpu.registers.a, 0);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+    }
+    
+    #[test]
+    fn test_add8() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 10,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.add8(Operand8::B);
+        assert_eq!(cpu.registers.a, 12);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+
+
+        cpu.add8(Operand8::D);
+        assert_eq!(cpu.registers.a, 11);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));        
+        
+        cpu.add8(Operand8::Addr(At::HL));
+        assert_eq!(cpu.registers.a, 250);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+    }
+    
+    #[test]
+    fn test_adc8() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 10,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.adc8(Operand8::B);
+        assert_eq!(cpu.registers.a, 12);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+
+
+        cpu.adc8(Operand8::D);
+        assert_eq!(cpu.registers.a, 11);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));        
+        
+        cpu.adc8(Operand8::Addr(At::HL));
+        assert_eq!(cpu.registers.a, 251);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
     }
 }
