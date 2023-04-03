@@ -304,7 +304,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Opcode::Rra,
         "RRA",
         None,
-        Operation::Rra,
+        Operation::Rr(Operand8::A),
         [Clock::Four, Clock::None],
     ),
     Instruction::new(
@@ -2468,8 +2468,6 @@ pub enum Operation {
     Rla,
 
     Rrca,
-
-    Rra,
 
     Rlc(Operand8),
 
