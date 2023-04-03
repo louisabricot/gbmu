@@ -447,10 +447,10 @@ impl Cpu {
     /// an immediate 8-bit data (`Imm8`) or  
     /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset
-    /// `H`: Set if there is a carry from bit3, otherwise reset
-    /// `N`: Set
-    /// `C`: Set if there is a carry from bit7, otherwise reset
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `N`: Set  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn sub(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
         self.registers.a = self.sub_u8(value);
@@ -462,10 +462,10 @@ impl Cpu {
     /// an immediate 8-bit data (`Imm8`) or  
     /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset
-    /// `H`: Set if there is a carry from bit3, otherwise reset
-    /// `N`: Set
-    /// `C`: Set if there is a carry from bit7, otherwise reset
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
+    /// `N`: Set  
+    /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn sbc(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
@@ -1001,24 +1001,28 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.dec8(Operand8::D);
         assert_eq!(cpu.registers.d, u8::MAX);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.dec8(Operand8::Addr(At::HL));
         assert_eq!(cpu.memory.read8(3), 238);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.dec8(Operand8::E);
         assert_eq!(cpu.registers.e, 15);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
     }
 
     #[test]
@@ -1045,29 +1049,32 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.inc8(Operand8::D);
         assert_eq!(cpu.registers.d, 0);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.inc8(Operand8::Addr(At::HL));
         assert_eq!(cpu.memory.read8(3), 240);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.inc8(Operand8::E);
         assert_eq!(cpu.registers.e, 16);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
     }
 
     #[test]
     fn test_cp() {
-        //TODO: missing carry flag check
         let mut cpu = Cpu {
             registers: Registers {
                 a: 10,
@@ -1090,24 +1097,28 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.cp(Operand8::D);
         assert_eq!(cpu.registers.a, 10);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.cp(Operand8::Addr(At::HL));
         assert_eq!(cpu.registers.a, 10);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.cp(Operand8::E);
         assert_eq!(cpu.registers.a, 10);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
     }
 
     #[test]
@@ -1256,28 +1267,31 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.sub(Operand8::L);
         assert_eq!(cpu.registers.a, 8);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.sub(Operand8::Addr(At::HL));
         assert_eq!(cpu.registers.a, 25);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.sub(Operand8::E);
         assert_eq!(cpu.registers.a, 20);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
     }
     #[test]
     fn test_sbc() {
-        //check update of A and carry flag
         let mut cpu = Cpu {
             registers: Registers {
                 a: 10,
@@ -1300,24 +1314,28 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.sbc(Operand8::L);
-        assert_eq!(cpu.registers.a, 8);
+        assert_eq!(cpu.registers.a, 7);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.sbc(Operand8::Addr(At::HL));
-        assert_eq!(cpu.registers.a, 25);
+        assert_eq!(cpu.registers.a, 24);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.sbc(Operand8::E);
-        assert_eq!(cpu.registers.a, 20);
+        assert_eq!(cpu.registers.a, 18);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
     }
     #[test]
     fn test_sub_u8() {
