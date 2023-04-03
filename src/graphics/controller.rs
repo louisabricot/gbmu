@@ -1,11 +1,11 @@
-extern crate native_dialog;
-
+//! Controller contains handling function for buttons in the LCD or Debugger Window
 use native_dialog::{FileDialog, MessageDialog, MessageType};
 
 use std::fs;
 
 use super::Graphics;
 
+/// Toggle overlay on the LCD Window
 pub fn toggle_overlay(graphics: &mut Graphics) {
     if graphics.lcd.joystick().hidden() {
         graphics.lcd.show_joystick();
@@ -14,6 +14,7 @@ pub fn toggle_overlay(graphics: &mut Graphics) {
     }
 }
 
+/// Open a FileDialog then load a Rom into memory
 pub fn load_rom(_graphics: &mut Graphics) {
     let path = match FileDialog::new()
         .add_filter("rom", &["gb"])

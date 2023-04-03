@@ -1,17 +1,13 @@
-extern crate sdl2;
-
-use sdl2::image::LoadTexture;
+//! LCD Window
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use sdl2::render::{Canvas, TextureQuery};
+use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::video::WindowPos::{Centered, Positioned};
 use sdl2::Sdl;
 
-use std::include_bytes;
-
-use super::button::Button;
-use super::utils::get_texture_rect;
+use super::gui::button::Button;
+use super::gui::joystick::{Joystick, JOYSTICK_TEXTURE_HEIGHT, JOYSTICK_TEXTURE_WIDTH};
 
 /// LCD width
 const SCREEN_WIDTH: u32 = 166;
@@ -20,9 +16,6 @@ const SCREEN_HEIGHT: u32 = 144;
 
 /// Ratio used to render the LCD window
 const PIXEL_SIZE: u32 = 4;
-
-const JOYSTICK_TEXTURE_WIDTH: u32 = 843;
-const JOYSTICK_TEXTURE_HEIGHT: u32 = 433;
 
 /// Represent the Gameboy LCD window
 pub struct Lcd {
@@ -46,8 +39,8 @@ impl Lcd {
         window.set_position(Centered, Positioned(0));
         let canvas = window.into_canvas().build().unwrap();
         let joystick = Joystick::new(&canvas);
-        let ratio_width: f32 = joystick.rect.width() as f32 / JOYSTICK_TEXTURE_WIDTH as f32;
-        let ratio_height: f32 = joystick.rect.height() as f32 / JOYSTICK_TEXTURE_HEIGHT as f32;
+        let ratio_width: f32 = joystick.rect().width() as f32 / JOYSTICK_TEXTURE_WIDTH as f32;
+        let ratio_height: f32 = joystick.rect().height() as f32 / JOYSTICK_TEXTURE_HEIGHT as f32;
         let buttons = vec![
             Button::new(
                 // A
@@ -190,12 +183,14 @@ impl Lcd {
         }
     }
 
+    /// Return a button if the name is matching
     pub fn keypress(&mut self, name: String) -> Option<&mut Button> {
         self.buttons
             .iter_mut()
             .find(|button| button.text().eq(&name))
     }
 
+    /// Return a button if exists at a given position
     pub fn click(&mut self, x: i32, y: i32) -> Option<&mut Button> {
         self.buttons
             .iter_mut()
@@ -226,6 +221,22 @@ impl Lcd {
         self.canvas.window().size().0 / PIXEL_SIZE
     }
 
+    /// Show joystick and activate click on buttons
+    pub fn show_joystick(&mut self) {
+        self.joystick.show();
+        for button in &mut self.buttons {
+            button.activate();
+        }
+    }
+
+    /// Hide joystick and deactive click on buttons
+    pub fn hide_joystick(&mut self) {
+        self.joystick.hide();
+        for button in &mut self.buttons {
+            button.deactivate();
+        }
+    }
+
     /// Get height of the LCD screen
     pub fn get_height(&self) -> u32 {
         self.canvas.window().size().1 / PIXEL_SIZE
@@ -236,20 +247,7 @@ impl Lcd {
         &self.canvas
     }
 
-    pub fn show_joystick(&mut self) {
-        self.joystick.show();
-        for button in &mut self.buttons {
-            button.activate();
-        }
-    }
-
-    pub fn hide_joystick(&mut self) {
-        self.joystick.hide();
-        for button in &mut self.buttons {
-            button.deactivate();
-        }
-    }
-
+    /// Get joystick
     pub fn joystick(&self) -> &Joystick {
         &self.joystick
     }
@@ -257,59 +255,5 @@ impl Lcd {
     /// Get the window id from canvas
     pub fn get_window_id(&self) -> u32 {
         self.canvas.window().id()
-    }
-}
-
-pub struct Joystick {
-    rect: Rect,
-    hidden: bool,
-}
-
-impl Joystick {
-    fn new(canvas: &Canvas<Window>) -> Self {
-        let layout_gameboy: &[u8] = include_bytes!("../../assets/layout_gameboy.png");
-
-        let texture_creator = canvas.texture_creator();
-        let texture = texture_creator.load_texture_bytes(layout_gameboy).unwrap();
-        let TextureQuery { width, height, .. } = texture.query();
-        let target = get_texture_rect(
-            0,
-            0,
-            width,
-            height,
-            canvas.window().size().0,
-            canvas.window().size().1,
-            true,
-        );
-
-        Self {
-            rect: target,
-            hidden: false,
-        }
-    }
-
-    pub fn hide(&mut self) {
-        self.hidden = true
-    }
-
-    pub fn show(&mut self) {
-        self.hidden = false
-    }
-
-    pub fn hidden(&self) -> bool {
-        self.hidden
-    }
-
-    fn rect(&self) -> &Rect {
-        &self.rect
-    }
-
-    fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
-        let layout_gameboy: &[u8] = include_bytes!("../../assets/layout_gameboy.png");
-
-        let texture_creator = canvas.texture_creator();
-        let mut texture = texture_creator.load_texture_bytes(layout_gameboy).unwrap();
-        texture.set_alpha_mod(64);
-        canvas.copy(&texture, None, Some(self.rect).unwrap())
     }
 }

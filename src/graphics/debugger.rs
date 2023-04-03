@@ -1,23 +1,22 @@
-extern crate sdl2;
-
+//! Debugger Window
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
-use sdl2::render::{Canvas, TextureQuery};
-use sdl2::rwops::RWops;
-use sdl2::ttf::Font;
+use sdl2::rect::Point;
+use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
-use std::include_bytes;
-
-use super::button::Button;
 use super::controller::{load_rom, toggle_overlay};
-use super::utils::get_texture_rect;
+use super::gui::button::Button;
+use super::gui::textbox::TextBox;
 use super::Graphics;
 
+/// Spaces between GUI elements
 const SPACE_SZ: u32 = 15;
+/// Button height
 const BTN_HEIGHT: u32 = 35;
+/// Registers TextBox height
 const REG_HEIGHT: u32 = 200;
+/// Program execution TextBox height
 const PRG_HEIGHT: u32 = 400;
 
 /// Debugger width
@@ -144,6 +143,7 @@ impl Debugger {
         }
     }
 
+    /// Return a button if exists at a given position
     pub fn click(&mut self, x: i32, y: i32) -> Option<&mut Button> {
         self.buttons
             .iter_mut()
@@ -199,65 +199,5 @@ impl Debugger {
     /// Get the window id from canvas
     pub fn get_window_id(&self) -> u32 {
         self.canvas.window().id()
-    }
-}
-
-const PADDING_TEXTBOX: u32 = 5;
-const INTERLINE_TEXTBOX: u32 = 2;
-const LINE_HEIGHT_TEXTBOX: u32 = 10;
-
-pub struct TextBox {
-    rect: Rect,
-    padding: u32,
-    interline: u32,
-    line_height: u32,
-}
-
-impl TextBox {
-    fn new(x: i32, y: i32, width: u32, height: u32) -> Self {
-        Self {
-            rect: Rect::new(x, y, width, height),
-            padding: PADDING_TEXTBOX,
-            interline: INTERLINE_TEXTBOX,
-            line_height: LINE_HEIGHT_TEXTBOX,
-        }
-    }
-
-    fn draw(&self, canvas: &mut Canvas<Window>, lines: Vec<&str>) -> Result<(), String> {
-        canvas.set_draw_color(Color::RED);
-        canvas.fill_rect(self.rect)?;
-
-        let ttf_context = sdl2::ttf::init().unwrap();
-        let texture_creator = canvas.texture_creator();
-
-        // Load a font
-        let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
-        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
-
-        for (index, line) in lines.iter().enumerate() {
-            // render a surface, and convert it to a texture bound to the canvas
-            let surface = font.render(line).solid(Color::WHITE).unwrap();
-            let texture = texture_creator
-                .create_texture_from_surface(&surface)
-                .unwrap();
-            let TextureQuery { width, height, .. } = texture.query();
-            let target = get_texture_rect(
-                self.rect.x() + self.padding as i32,
-                self.rect.y()
-                    + (index * (self.line_height + self.interline) as usize) as i32
-                    + self.padding as i32,
-                width,
-                height,
-                self.rect.width(),
-                self.line_height,
-                false,
-            );
-            canvas.copy(&texture, None, Some(target).unwrap())?;
-        }
-        Ok(())
-    }
-
-    fn get_nb_lines(&self) -> u32 {
-        (self.rect.height() - self.padding * 2) / (self.line_height + self.interline)
     }
 }

@@ -1,27 +1,41 @@
-extern crate sdl2;
-
-use std::time::Duration;
+//! Graphics module include windows, GUI elements and graphics controllers for
+//! the GameBoy
+//!
+//! # Example
+//! ```
+//! use graphics::Graphics;
+//!
+//! fn main() {
+//!     let mut graphics: Graphics = Graphics::new();
+//!     graphics.render();
+//! }
+//! ```
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::Sdl;
 
-mod button;
+use std::time::Duration;
+
 mod controller;
 mod debugger;
+mod gui;
 mod lcd;
-mod utils;
 
 use debugger::Debugger;
 use lcd::Lcd;
 
 pub struct Graphics {
+    /// Sdl context provide by sdl2
     sdl_context: Sdl,
+    /// LCD Window rendering GameBoy screen
     pub lcd: Lcd,
+    /// Debugger Window providing options for the GameBoy emulator
     pub debugger: Debugger,
 }
 
 impl Graphics {
+    /// Create a new Graphics object from a sdl2 context
     pub fn new() -> Self {
         let sdl_context = sdl2::init().unwrap();
         let lcd = Lcd::new(&sdl_context);
@@ -35,6 +49,7 @@ impl Graphics {
         }
     }
 
+    /// Render LCD and Debugger Windows, loop and trigger GUI buttons events
     pub fn render(&mut self) {
         let mut event_pump = self.sdl_context.event_pump().unwrap();
         'running: loop {
