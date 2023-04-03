@@ -1244,7 +1244,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sub() {
+    fn test_sub_u8() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 10,
@@ -1262,29 +1262,25 @@ mod tests {
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.sub(Operand8::D);
-        assert_eq!(cpu.registers.a, 11);
+        assert_eq!(cpu.sub_u8(0xff), 11);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
 
-        cpu.sub(Operand8::L);
-        assert_eq!(cpu.registers.a, 8);
+        assert_eq!(cpu.sub_u8(3), 7);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
 
-        cpu.sub(Operand8::Addr(At::HL));
-        assert_eq!(cpu.registers.a, 25);
+        assert_eq!(cpu.sub_u8(239), 27);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
 
-        cpu.sub(Operand8::E);
-        assert_eq!(cpu.registers.a, 20);
+        assert_eq!(cpu.sub_u8(5), 5);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -1336,11 +1332,5 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-    }
-    #[test]
-    fn test_sub_u8() {
-        //TODO: check result
-        //check flags
-        //check possible parameters and corner cases like overflowing
     }
 }
