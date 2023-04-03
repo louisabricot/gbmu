@@ -111,6 +111,7 @@ impl Cpu {
 
             //TODO: Rlca, Rla, Rrca, Rra, Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
             Operation::Rlca => self.rlca(),
+            Operation::Rla => self.rla(),
 
             //Operation::Rlc(target) => self.rlc(target),
             //TODO: bit, set, res
@@ -126,6 +127,24 @@ impl Cpu {
         }
     }
 
+    /// Rotates the content of the 8-bit register `A`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Set if bit7 from `A` is 1 before the rotation, otherwise reset  
+
+    fn rla(&mut self) {
+       
+        let bit7 = self.registers.a >> 7;
+        self.registers.a = self.registers.a << 1;
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+
+    }
     /// Rotates the content of the 8-bit register `A`.  
     /// Places the content of bit7 both in the `carry` flag and bit 0.  
     /// `Flag Register` is updated as follows:  
@@ -1614,6 +1633,33 @@ mod tests {
 
         cpu.rlca();
         assert_eq!(cpu.registers.a, 0x0B);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+    }
+    
+    #[test]
+    fn test_rla() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x95,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.rla();
+        assert_eq!(cpu.registers.a, 0x2A);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
