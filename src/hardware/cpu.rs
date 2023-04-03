@@ -109,13 +109,12 @@ impl Cpu {
 
             // Rotate, shift and bit operations
 
-            //TODO: Rlca, Rla, Rrca, Rra, Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
+            //TODO: Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
             Operation::Rlca => self.rlca(),
             Operation::Rla => self.rla(),
             Operation::Rrca => self.rrca(),
             Operation::Rra => self.rra(),
-
-            //Operation::Rlc(target) => self.rlc(target),
+            Operation::Rlc(target) => self.rlc(target),
             //TODO: bit, set, res
             // Control Flow instruction
             //TODO: Ccf, Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
@@ -129,6 +128,24 @@ impl Cpu {
         }
     }
     
+    /// Rotates the content of *target* to the left.
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
+    fn rlc(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit7 = value >> 7; 
+        let new_value = value.rotate_left(1);
+        
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
     /// Rotates the content of the 8-bit register `A` to the right.  
     /// `Flag Register` is updated as follows:  
     /// `Z`: Reset  
@@ -139,7 +156,7 @@ impl Cpu {
         
         let bit0 = self.registers.a & 1;
 
-        self.registers.a = self.registers.a >> 1;
+        self.registers.a = self.registers.a >> 1 | bit0 << 7;
         self.registers.f.set(Flags::C, bit0 == 1);
         self.registers.f.set(Flags::Z, false);
         self.registers.f.set(Flags::H, false);
@@ -158,7 +175,7 @@ impl Cpu {
 
         let bit0 = self.registers.a & 1;
 
-        self.registers.a = self.registers.a >> 1 | bit0 << 7;
+        self.registers.a = self.registers.a.rotate_right(1);
         self.registers.f.set(Flags::C, bit0 == 1);
         self.registers.f.set(Flags::Z, false);
         self.registers.f.set(Flags::H, false);
@@ -175,7 +192,8 @@ impl Cpu {
     fn rla(&mut self) {
        
         let bit7 = self.registers.a >> 7;
-        self.registers.a = self.registers.a << 1;
+        
+        self.registers.a = self.registers.a.rotate_left(1);
 
         self.registers.f.set(Flags::C, bit7 == 1);
         self.registers.f.set(Flags::Z, false);
@@ -194,7 +212,7 @@ impl Cpu {
         let mut value = self.registers.a;
         let bit7 = value >> 7;
 
-        self.registers.a = (value << 1) | bit7 ;
+        self.registers.a = self.registers.a.rotate_left(1);
 
         self.registers.f.set(Flags::C, bit7 == 1);
         self.registers.f.set(Flags::Z, false);
@@ -1697,7 +1715,7 @@ mod tests {
         };
 
         cpu.rla();
-        assert_eq!(cpu.registers.a, 0x2A);
+        assert_eq!(cpu.registers.a, 0x2B);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -1730,7 +1748,8 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
     }
-    
+
+    #[test]
     fn test_rra() {
         let mut cpu = Cpu {
             registers: Registers {
@@ -1750,11 +1769,44 @@ mod tests {
         };
 
         cpu.rra();
-        assert_eq!(cpu.registers.a, 0x40);
+        assert_eq!(cpu.registers.a, 192);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
     }
     
+    #[test]
+    fn test_rlc() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x81,
+                b: 0x85,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.rlc(Operand8::B);
+        assert_eq!(cpu.registers.b, 0x0B);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+        
+        cpu.rlc(Operand8::Addr(At::HL));
+        assert_eq!(cpu.memory.read16(3), 0x00);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }
 }
