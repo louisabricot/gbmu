@@ -1,9 +1,26 @@
+//! Collection of utilitary functions used by GUI elements
 use sdl2::rect::Rect;
+use sdl2::rwops::RWops;
+use sdl2::ttf::{Font, Sdl2TtfContext};
+
+/// Get gameboy font for GUI elements
+pub fn get_font<'ttf, 'r>(ttf_context: &'ttf Sdl2TtfContext) -> Result<Font<'ttf, 'r>, String> {
+    let font: &[u8] = include_bytes!("../../../assets/gameboy.ttf");
+    ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)
+}
 
 /// Return a sdl2 Rect to scale texture
+///
+/// # Arguments
+///
+/// * `(x, y)` - Position of the parent rect
+/// * `rect_width` - Texture's width
+/// * `rect_height` - Texture's height
+/// * `const_width` - Parent's width
+/// * `const_height` - Parent's height
+/// * `centered` - Center the texture inside his parent
 pub fn get_texture_rect(
-    x: i32,
-    y: i32,
+    (x, y): (i32, i32),
     rect_width: u32,
     rect_height: u32,
     cons_width: u32,

@@ -1,26 +1,57 @@
+//! GUI Button
+//!
+//! # Example
+//!
+//! ```
+//! use crate::graphics::Graphics;
+//! use crate::graphics::gui::button::Button;
+//!
+//! fn ok_handler(_graphics: &mut Graphics) {
+//!     println!("Ok !");
+//! }
+//!
+//! let button: Button = Button::new(
+//!     (0, 0),
+//!     100,
+//!     35,
+//!     10,
+//!     "OK".to_string(),
+//!     true,
+//!     Some(ok_handler),
+//! );
+//! ```
+
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, TextureQuery};
-use sdl2::rwops::RWops;
 use sdl2::ttf::Font;
+use sdl2::ttf::Sdl2TtfContext;
 use sdl2::video::Window;
 
-use super::utils::get_texture_rect;
-use super::Graphics;
+use super::super::Graphics;
+use super::utils::{get_font, get_texture_rect};
 
+/// Represent a GUI Button
 #[derive(Clone)]
 pub struct Button {
+    /// `sdl2::rect::Rect` to locate and draw button
     rect: Rect,
+    /// Text to print inside the button
     text: String,
+    /// Text font size
     line_height: u32,
+    /// Tell if the text is centered inside the button
     centered_text: bool,
+    /// Tell if the button is active or not, could be use in parent class to
+    /// check for actions
     active: bool,
+    /// Action to execute
     action: Option<fn(&mut Graphics)>,
 }
 
 impl Button {
     pub fn new(
-        pos: (i32, i32),
+        (x, y): (i32, i32),
         width: u32,
         height: u32,
         line_height: u32,
@@ -29,7 +60,7 @@ impl Button {
         action: Option<fn(&mut Graphics)>,
     ) -> Self {
         Self {
-            rect: Rect::new(pos.0, pos.1, width, height),
+            rect: Rect::new(x, y, width, height),
             text,
             line_height,
             centered_text: centered,
@@ -51,12 +82,11 @@ impl Button {
                 canvas.fill_rect(self.rect)?;
             }
         }
-        let ttf_context = sdl2::ttf::init().unwrap();
+        let ttf_context: Sdl2TtfContext = sdl2::ttf::init().unwrap();
         let texture_creator = canvas.texture_creator();
 
         // Load a font
-        let font: &[u8] = include_bytes!("../../assets/gameboy.ttf");
-        let font: Font = ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)?;
+        let font: Font = get_font(&ttf_context)?;
 
         // render a surface, and convert it to a texture bound to the canvas
         let surface = font.render(self.text.as_str()).solid(font_color).unwrap();
@@ -70,8 +100,7 @@ impl Button {
             pos_y += (self.rect.height() as i32 - self.line_height as i32) / 2;
         }
         let target = get_texture_rect(
-            self.rect.x(),
-            pos_y,
+            (self.rect.x(), pos_y),
             width,
             height,
             self.rect.width(),
