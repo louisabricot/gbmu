@@ -383,14 +383,14 @@ impl Cpu {
     /// Returns the 8-bit data represented by *operand*.  
     /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),
     /// an 8-bit immediate data (`Imm8`) or
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).
     */
 
     /// Adds *source* to the 8-bit register `A`, and stores the result
     /// back into `A`.  
     /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
     /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset
     /// `H`: Set if there is a carry from bit3, otherwise reset
@@ -405,7 +405,7 @@ impl Cpu {
     /// back into `A`.  
     /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
     /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset
     /// `H`: Set if there is a carry from bit3, otherwise reset
@@ -417,7 +417,7 @@ impl Cpu {
         self.add_u8_to_A(carry + value);
     }
 
-    /// Substracts the u8 data from the 8-bit register `A` and returns the result.  
+    /// Substracts the 8-bit *data* from the 8-bit register `A` and returns the result.  
     /// `FlagRegister` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset  
     /// `H`: Set if there is a carry from bit3, otherwise reset  
@@ -445,7 +445,7 @@ impl Cpu {
     /// result back into `A`.  
     /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
     /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
     /// `FlagRegister` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset
     /// `H`: Set if there is a carry from bit3, otherwise reset
@@ -456,28 +456,20 @@ impl Cpu {
         self.registers.a = self.sub_u8(value);
     }
 
+    /// Substracts *source* and the `carry` flag from the 8-bit register `A` and stores the
+    /// result back into `A`.  
+    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
+    /// an immediate 8-bit data (`Imm8`) or  
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset
+    /// `H`: Set if there is a carry from bit3, otherwise reset
+    /// `N`: Set
+    /// `C`: Set if there is a carry from bit7, otherwise reset
     fn sbc(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
-
         let value = self.get_operand8(source);
-
-        let (result, overflow) = self.registers.a.overflowing_sub(value + carry);
-
-        let half_carry = false; //TODO
-
-        self.registers.a = result;
-
-        // Z: Set if the result is 0, otherwise reset
-        self.registers.f.set(Flags::Z, result == 0);
-
-        // H: Set if there is a carry fromt bit3, otherwise reset
-        self.registers.f.set(Flags::H, half_carry);
-
-        // N: Set
-        self.registers.f.set(Flags::N, true);
-
-        // CY: Set if there is carry from bit7, otherwise reset
-        self.registers.f.set(Flags::C, overflow);
+        self.registers.a = self.sub_u8(value + carry);
     }
 
     /// Jump to the absolute address speicified by the 16-bit operand, depending on the condition
@@ -522,7 +514,7 @@ impl Cpu {
     /// Returns the 8-bit data represented by *operand*.  
     /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
     /// an 8-bit immediate data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represent the location).
+    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).
     fn get_operand8(&mut self, operand: Operand8) -> u8 {
         match operand {
             Operand8::A => self.registers.a,
@@ -587,7 +579,7 @@ impl Cpu {
     /// Returns the 16-bit data represented by *operand*.  
     /// `Operand16` is either a 16-bit register (`AF`, `BC`, `DE`, `HL`, `SP`),
     /// a 16-bit or 8-bit immediate data (`Imm16` or `Imm8`) or,
-    /// the 16-bit data stored at location (`Addr(at)` where `at` represent the location).
+    /// the 16-bit data stored at location (`Addr(at)` where `at` represents the location).
     /// When *operand* represents an 8-bit data, the returned value is obtained by setting the most
     /// significant byte to `0x00` and the least significant byte to the 8-bit data to form a
     /// 16-bit value in the range `0x0000-0x00FF`.
@@ -1075,6 +1067,7 @@ mod tests {
 
     #[test]
     fn test_cp() {
+        //TODO: missing carry flag check
         let mut cpu = Cpu {
             registers: Registers {
                 a: 10,
@@ -1237,5 +1230,99 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_sub() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 10,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.sub(Operand8::D);
+        assert_eq!(cpu.registers.a, 11);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.sub(Operand8::L);
+        assert_eq!(cpu.registers.a, 8);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+
+        cpu.sub(Operand8::Addr(At::HL));
+        assert_eq!(cpu.registers.a, 25);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.sub(Operand8::E);
+        assert_eq!(cpu.registers.a, 20);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+    }
+    #[test]
+    fn test_sbc() {
+        //check update of A and carry flag
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 10,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.sbc(Operand8::D);
+        assert_eq!(cpu.registers.a, 11);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.sbc(Operand8::L);
+        assert_eq!(cpu.registers.a, 8);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+
+        cpu.sbc(Operand8::Addr(At::HL));
+        assert_eq!(cpu.registers.a, 25);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+
+        cpu.sbc(Operand8::E);
+        assert_eq!(cpu.registers.a, 20);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+    }
+    #[test]
+    fn test_sub_u8() {
+        //TODO: check result
+        //check flags
+        //check possible parameters and corner cases like overflowing
     }
 }
