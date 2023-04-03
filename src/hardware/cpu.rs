@@ -70,7 +70,6 @@ impl Cpu {
                 self.load8(dst, src);
             }
 
-            // TODO: clean code because super redundant
             Operation::Load8Dec(dst, src) => {
                 self.load8(dst, src);
                 let hl = self.registers.read16(Register16::HL);
@@ -111,6 +110,9 @@ impl Cpu {
             // Rotate, shift and bit operations
 
             //TODO: Rlca, Rla, Rrca, Rra, Rlc, Rl, Rrc, Rr, Sla, Swap, Sra, Srl
+            Operation::Rlca => self.rlca(),
+
+            //Operation::Rlc(target) => self.rlc(target),
             //TODO: bit, set, res
             // Control Flow instruction
             //TODO: Ccf, Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
@@ -123,6 +125,26 @@ impl Cpu {
             _ => todo!(),
         }
     }
+
+    /// Rotates the content of the 8-bit register `A`.  
+    /// Places the content of bit7 both in the `carry` flag and bit 0.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Set if bit7 from `A` is 1 before the rotation  
+    fn rlca(&mut self) {
+        let mut value = self.registers.a;
+        let bit7 = value >> 7;
+
+        self.registers.a = (value << 1) | bit7 ;
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
     /// Loads the sum of `SP` and the 8-bit immediate value to the 16-bit register `HL`.  
     /// `Flag Register` is updated as follows:  
     /// `Z`: Reset  
@@ -1569,5 +1591,32 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
-    }   
+    }
+
+    #[test]
+    fn test_rlca() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x85,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.rlca();
+        assert_eq!(cpu.registers.a, 0x0B);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+    }
 }
