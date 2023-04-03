@@ -378,24 +378,10 @@ impl Cpu {
         self.registers.f.set(Flags::N, false);
         self.registers.f.set(Flags::C, overflow);
     }
-    
-    /*
-    /// Returns the 8-bit data represented by *operand*.  
-    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),
-    /// an 8-bit immediate data (`Imm8`) or
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).
-    */
 
     /// Adds *source* to the 8-bit register `A`, and stores the result
     /// back into `A`.  
-    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
-    /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
-    /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Set if there is a carry from bit3, otherwise reset  
-    /// `N`: Reset  
-    /// `C`: Set if there is a carry from bit7, otherwise reset  
+    /// Calls `add_u8_to_A` with the value returned by `get_operand8`.  
     fn add8(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
         self.add_u8_to_A(value);
@@ -403,14 +389,7 @@ impl Cpu {
 
     /// Adds *source* and the `carry flag` to the 8-bit register `A`, and stores the result
     /// back into `A`.  
-    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
-    /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
-    /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Set if there is a carry from bit3, otherwise reset  
-    /// `N`: Reset  
-    /// `C`: Set if there is a carry from bit7, otherwise reset  
+    /// Calls `add_u8_to_A` with the value returned by `get_operand8` and the `carry` flag.  
     fn adc8(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
@@ -443,14 +422,7 @@ impl Cpu {
     
     /// Substracts *source* from the 8-bit register `A` and stores the
     /// result back into `A`.  
-    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
-    /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
-    /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Set if there is a carry from bit3, otherwise reset  
-    /// `N`: Set  
-    /// `C`: Set if there is a carry from bit7, otherwise reset  
+    /// Calls `sub_u8` with the value returned by `get_operand8`.  
     fn sub(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
         self.registers.a = self.sub_u8(value);
@@ -458,14 +430,7 @@ impl Cpu {
 
     /// Substracts *source* and the `carry` flag from the 8-bit register `A` and stores the
     /// result back into `A`.  
-    /// `Operand8` is either a 8-bit register (`A`, `B`, `C`, `D`, `E`, `H`, `L`),  
-    /// an immediate 8-bit data (`Imm8`) or  
-    /// an 8-bit data stored at location (`Addr(at)` where `at` represents the location).  
-    /// `FlagRegister` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Set if there is a carry from bit3, otherwise reset  
-    /// `N`: Set  
-    /// `C`: Set if there is a carry from bit7, otherwise reset  
+    /// Calls `sub_u8` with the value returned by `get_operand8` and the `carry` flag.  
     fn sbc(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
