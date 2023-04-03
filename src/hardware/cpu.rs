@@ -123,12 +123,12 @@ impl Cpu {
             _ => todo!(),
         }
     }
-    /// The 8-bit operand is added to SP and the result is stored in HL.
-    /// Flags affected:
-    /// Z: Reset
-    /// H: Set if there is a carry from bit 11, otherwise reset
-    /// N: Reset
-    /// C: Set if there is a carry from bit 15, otherwise reset
+    /// Loads the sum of `SP` and the 8-bit immediate value to the 16-bit register `HL`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `H`: Set if there is a carry from bit 11, otherwise reset  
+    /// `N`: Reset  
+    /// `C`: Set if there is a carry from bit 15, otherwise reset  
     fn loadHL(&mut self) {
         let value = self.read_imm8() as u16;
 
@@ -1543,4 +1543,31 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
     }
+
+    #[test]
+    fn test_loadHL() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.loadHL();
+        assert_eq!(cpu.registers.read16(Register16::HL), 0xFFFA);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }   
 }
