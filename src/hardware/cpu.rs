@@ -201,12 +201,12 @@ impl Cpu {
         self.registers.f.set(Flags::H, half_carry);
         self.registers.f.set(Flags::C, carry);
     }
-    /// Flips all the bits in the 8-bit register A
-    /// The Flag Register are affected as follows:
-    /// N: Set
-    /// H: Set
-    /// C: Not affected
-    /// Z: Not affected
+    /// Flips all the bits in the 8-bit register `A`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `N`: Set  
+    /// `H`: Set  
+    /// `C`: Not affected  
     fn cpl(&mut self) {
         self.registers.a = !self.registers.a;
         self.registers.f.set(Flags::N, true);
@@ -1458,5 +1458,48 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));        
+    }
+
+    #[test]
+    fn test_cpl() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 10,
+                b: 2,
+                c: 3,
+                d: 0xFF,
+                e: 5,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.cpl();
+        assert_eq!(cpu.registers.a, 0b11110101);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+
+        cpu.registers.a = 0;
+        cpu.cpl();
+        assert_eq!(cpu.registers.a, 0xff);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+        
+        cpu.cpl();
+        assert_eq!(cpu.registers.a, 0x0);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));        
+        
     }
 }
