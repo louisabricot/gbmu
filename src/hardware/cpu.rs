@@ -113,6 +113,7 @@ impl Cpu {
             Operation::Rlca => self.rlca(),
             Operation::Rla => self.rla(),
             Operation::Rrca => self.rrca(),
+            Operation::Rra => self.rra(),
 
             //Operation::Rlc(target) => self.rlc(target),
             //TODO: bit, set, res
@@ -127,14 +128,32 @@ impl Cpu {
             _ => todo!(),
         }
     }
+    
+    /// Rotates the content of the 8-bit register `A` to the right.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn rra(&mut self) {
+        
+        let bit0 = self.registers.a & 1;
 
-    /// Rotates the content of the 8-bit register `A`.   
+        self.registers.a = self.registers.a >> 1;
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+        
+    }
+
+    /// Rotates the content of the 8-bit register `A` to the right.   
     /// Places the content of bit0 both in the `carry` flag and bit 7.  
     /// `Flag Register` is updated as follows:  
     /// `Z`: Reset  
     /// `H`: Reset  
     /// `N`: Reset  
-    /// `C`: Set if bit0 is 1 before the rotation  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
     fn rrca(&mut self) {
 
         let bit0 = self.registers.a & 1;
@@ -1711,4 +1730,31 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
     }
+    
+    fn test_rra() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x81,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.rra();
+        assert_eq!(cpu.registers.a, 0x40);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+    }
+    
 }
