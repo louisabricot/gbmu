@@ -4,7 +4,7 @@ use sdl2::rwops::RWops;
 use sdl2::ttf::{Font, Sdl2TtfContext};
 
 /// Get gameboy font for GUI elements
-pub fn get_font<'ttf, 'r>(ttf_context: &'ttf Sdl2TtfContext) -> Result<Font<'ttf, 'r>, String> {
+pub fn get_font<'r>(ttf_context: &Sdl2TtfContext) -> Result<Font<'_, 'r>, String> {
     let font: &[u8] = include_bytes!("../../../assets/gameboy.ttf");
     ttf_context.load_font_from_rwops(RWops::from_bytes(font)?, 128)
 }

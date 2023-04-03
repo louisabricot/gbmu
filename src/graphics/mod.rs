@@ -5,10 +5,8 @@
 //! ```
 //! use graphics::Graphics;
 //!
-//! fn main() {
-//!     let mut graphics: Graphics = Graphics::new();
-//!     graphics.render();
-//! }
+//! let mut graphics: Graphics = Graphics::new();
+//! graphics.render();
 //! ```
 
 use sdl2::event::{Event, WindowEvent};
