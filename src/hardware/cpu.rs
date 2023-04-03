@@ -118,6 +118,7 @@ impl Cpu {
             Operation::Rrc(target) => self.rrc(target),
             Operation::Rr(target) => self.rr(target),
             Operation::Sla(target) => self.sla(target),
+            Operation::Sra(target) => self.sra(target),
             //TODO: bit, set, res
             // Control Flow instruction
             //TODO: Ccf, Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
@@ -131,7 +132,30 @@ impl Cpu {
         }
     }
 
+    /// Rotates the content of *target* to the right.  
+    /// Copies bit0 to the `carry` flag and preserves bit7.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn sra(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit0 = value & 1;
+        let bit7 = value >> 7;
+        let new_value = value >> 1 | bit7 << 7;
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+
     /// Rotates the content of *target* to the left.  
+    /// Copies bit7 into the `carry` flag and resets bit0.  
     /// `Flag Register` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset  
     /// `H`: Reset  
@@ -148,7 +172,6 @@ impl Cpu {
         self.registers.f.set(Flags::Z, new_value == 0);
         self.registers.f.set(Flags::H, false);
         self.registers.f.set(Flags::N, false);
-
     }
     
     /// Rotates the content of *target* to the right.  
@@ -2008,6 +2031,40 @@ mod tests {
         cpu.sla(Operand8::Addr(At::HL));
         assert_eq!(cpu.memory.read16(3), 0xFE);
         assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+    }
+    
+    #[test]
+    fn test_sra() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x8A,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 1, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.sra(Operand8::D);
+        assert_eq!(cpu.registers.d, 0xC5);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        
+        cpu.sra(Operand8::Addr(At::HL));
+        assert_eq!(cpu.memory.read16(3), 0x00);
+        assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
