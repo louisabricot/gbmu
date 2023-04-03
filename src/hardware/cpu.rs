@@ -165,8 +165,8 @@ impl Cpu {
         self.registers.f.set(Flags::C, carry);
     }
 
-    /// Increments the contents of register pair by 1
-    /// Flags are not affected
+    /// Increments data represented by `target` by 1.  
+    /// `Flag Register` is not updated.  
     fn inc16(&mut self, target: Operand16) {
         let mut value = self.registers.read16(Registers::get_register16(target));
         value = value.wrapping_add(1);
@@ -174,8 +174,8 @@ impl Cpu {
             .write16(Registers::get_register16(target), value);
     }
 
-    /// Decrements the contents of register pair by 1
-    /// Flags are not affected
+    /// Decrements data represented by `target` by 1.  
+    /// `Flag Register` is not updated.  
     fn dec16(&mut self, target: Operand16) {
         let mut value = self.registers.read16(Registers::get_register16(target));
         value = value.wrapping_sub(1);
@@ -1501,5 +1501,81 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));        
         
+    }
+
+    #[test]
+    fn test_dec16() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        cpu.dec16(Operand16::AF);
+        assert_eq!(cpu.registers.read16(Register16::AF), 240);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+
+        cpu.dec16(Operand16::DE);
+        assert_eq!(cpu.registers.read16(Register16::DE), 15);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+    }
+    
+    #[test]
+    fn test_inc16() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 0,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 3,
+                sp: 11,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+        cpu.inc16(Operand16::AF);
+        assert_eq!(cpu.registers.read16(Register16::AF), 256);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.inc16(Operand16::DE);
+        assert_eq!(cpu.registers.read16(Register16::DE), 17);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
     }
 }
