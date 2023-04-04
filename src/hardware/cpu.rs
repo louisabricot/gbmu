@@ -125,7 +125,9 @@ impl Cpu {
             Operation::Res(bit, target) => self.res(bit, target),
 
             // Control Flow instruction
-            //TODO: Ccf, Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
+            //TODO: Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
+            Operation::Ccf => self.ccf(),
+            Operation::Scf => self.scf(),
             Operation::Jp(condition, source) => {
                 self.absolute_jump(condition, source);
             }
@@ -134,6 +136,32 @@ impl Cpu {
             }
             _ => todo!(),
         }
+    }
+
+    /// Sets the `carry` flag.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Toggled  
+    fn scf(&mut self) {
+        self.registers.f.set(Flags::C, true);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Toggles the `carry` flag.  
+    /// If `carry` flag is set, then reset it.  
+    /// If `carry` flag is reset, then set it.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Reset  
+    /// `N`: Reset  
+    /// `C`: Toggled  
+    fn ccf(&mut self) {
+        self.registers.f.toggle(Flags::C);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
     }
 
     /// Resets the bit specified by *bit* in *target* to 0.  
@@ -2304,5 +2332,79 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_ccf() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.ccf();
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+
+        cpu.ccf();
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_scf() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.scf();
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
+
+        cpu.scf();
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(cpu.registers.f.contains(Flags::C));
     }
 }
