@@ -150,7 +150,8 @@ impl Cpu {
     /// `N`: Not affected  
     /// `C`: Not affected  
     fn ret(&mut self, condition: Condition) {
-        let address = todo!();
+        let address = self.memory.read16(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(2);
         if self.registers.f.check_condition(condition) {
             self.registers.pc = address;
         }
@@ -2531,7 +2532,7 @@ mod tests {
     }
 
     #[test]
-    fn call() {
+    fn test_call() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 0x80,
@@ -2552,5 +2553,28 @@ mod tests {
         assert_eq!(cpu.registers.pc, 0x4);
         assert_eq!(cpu.registers.sp, 0x1);
         assert_eq!(cpu.memory.read16(cpu.registers.sp), 0x803);
+    }
+
+    #[test]
+    fn test_ret() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0,
+                e: 0x04,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0x3,
+                pc: 0x0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        cpu.ret(Condition::Always);
+        //assert_eq!(cpu.registers.pc, 0x03);
+        assert_eq!(cpu.registers.sp, 0x5);
     }
 }
