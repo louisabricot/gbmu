@@ -20,6 +20,7 @@ pub struct Cpu {
 pub enum State {
     Running,
     Halt,
+    Stop,
     Interrupt,
 }
 
@@ -125,17 +126,49 @@ impl Cpu {
             Operation::Res(bit, target) => self.res(bit, target),
 
             // Control Flow instruction
-            //TODO: Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
+            //TODO: Jp, Jr, Call, Ret, Reti, Rst
             Operation::Ccf => self.ccf(),
             Operation::Scf => self.scf(),
-            Operation::Jp(condition, source) => {
-                self.absolute_jump(condition, source);
-            }
-            Operation::Jr(condition) => {
-                self.relative_jump(condition);
-            }
+            Operation::Nop => self.nop(),
+            Operation::Halt => self.halt(),
+            Operation::Stop => self.stop(),
+            Operation::Di => self.di(),
+            Operation::Ei => self.ei(),
+            Operation::Jp(condition, source) => self.absolute_jump(condition, source),
+            Operation::Jr(condition) => self.relative_jump(condition),
             _ => todo!(),
         }
+    }
+
+    /// Disables interrupts
+    fn di(&mut self) {
+        todo!();
+    }
+
+    /// Enables interrupts
+    fn ei(&mut self) {
+        todo!();
+    }
+    /// Stops both the system clock and the oscillator circuit.  
+    /// Stop mode stops the LCD controller.  
+    /// Stop mode is canceled by a reset signal.
+    fn stop(&mut self) {
+        self.state = State::Stop;
+        todo!();
+    }
+
+    /// Stops the system clock and enters HALT mode.  
+    /// HALT mode is canceled by an interrupt or a reset signal.  
+    /// Although the system clock is stopped in this state, the oscillator circuit and LCD
+    /// controller continue to operate.  
+    fn halt(&mut self) {
+        self.state = State::Halt;
+        todo!();
+    }
+
+    /// Does nothing.  
+    fn nop(&mut self) {
+        todo!();
     }
 
     /// Sets the `carry` flag.  
@@ -721,42 +754,29 @@ impl Cpu {
         self.registers.a = self.sub_u8(value + carry);
     }
 
-    /// Jump to the absolute address speicified by the 16-bit operand, depending on the condition
-    /// Reads the 16-bit operand from immediate memory
-    /// Update the value of PC with the operand
-    /// Note that the operand is read even if the condition is false
-    /// Unconditional jumps are also handled by this function, their condition is of type
-    /// Condition::Always
+    /// Loads the value of *source* to the `Program Counter` if *condition* is true.  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Not affected  
+    /// `N`: Not affected  
+    /// `C`: Not affected  
     fn absolute_jump(&mut self, condition: Condition, source: Operand16) {
-        let address: u16 = match source {
-            Operand16::Imm16 => self.read_imm16(),
-            Operand16::HL => self.registers.read16(Register16::HL),
-            _ => panic!("Not a valid Operand16 for absolute jumps"),
-        };
-
-        /* if source == Operand16::Imm16 {
-            address = self.read_imm16();
-        } else {
-            address = self.registers.read16(Register16::HL);
-        }*/
-
+        let address = self.get_operand16(source);
         if self.registers.f.check_condition(condition) {
             self.registers.pc = address;
         }
     }
 
-    /// Jump to the relative address specified by the signed 8-bit operand, depending
-    /// on condition
-    /// Reads the 8-bit operand from immediate memory
-    /// Adds operand to PC if the condition is checked
-    /// Note that the operand is read even when the condition is false
-    /// Unconditional relative jumps are also handled by this fonction, their condition is of type
-    /// Condition::Always
+    /// Adds the 8-bit immediate value to the `Program Counter` if *condition* is true.  
+    /// `FlagRegister` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Not affected  
+    /// `N`: Not affected  
+    /// `C`: Not affected  
     fn relative_jump(&mut self, condition: Condition) {
-        let operand = self.read_imm8() as u16;
-
+        let steps = self.memory.read8(self.registers.pc) as u16;
         if self.registers.f.check_condition(condition) {
-            self.registers.pc += operand;
+            self.registers.pc += steps;
         }
     }
 
@@ -916,6 +936,9 @@ impl Cpu {
                 todo!();
             }
             State::Interrupt => {
+                todo!();
+            }
+            State::Stop => {
                 todo!();
             }
         }
@@ -2406,5 +2429,72 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_absolute_jump() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0x00,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.absolute_jump(Condition::Always, Operand16::HL);
+        assert_eq!(cpu.registers.pc, 0x3b);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.absolute_jump(Condition::Always, Operand16::BC);
+        assert_eq!(cpu.registers.pc, 0x8503);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_relative_jump() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0x00,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.relative_jump(Condition::Always);
+        assert_eq!(cpu.registers.pc, 2);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.relative_jump(Condition::Always);
+        assert_eq!(cpu.registers.pc, 149);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
     }
 }
