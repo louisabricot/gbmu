@@ -2,9 +2,9 @@ use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
-    At, Condition, Instruction, Opcode, Operand16, Operand8, Operation,
+    At, Bit, Condition, Instruction, Opcode, Operand16, Operand8, Operation,
 };
-use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
+use std::ops::{BitAnd, BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
 
 #[allow(dead_code)]
@@ -108,8 +108,6 @@ impl Cpu {
             Operation::LoadHL => self.loadHL(),
 
             // Rotate, shift and bit operations
-
-            //TODO: Swap, Srl
             Operation::Rlca => self.rlca(),
             Operation::Rla => self.rla(),
             Operation::Rrca => self.rrca(),
@@ -121,7 +119,11 @@ impl Cpu {
             Operation::Sra(target) => self.sra(target),
             Operation::Srl(target) => self.srl(target),
             Operation::Swap(target) => self.swap(target),
-            //TODO: bit, set, res
+
+            Operation::Bit(bit, target) => self.bit(bit, target),
+            Operation::Set(bit, target) => self.set(bit, target),
+            Operation::Res(bit, target) => self.res(bit, target),
+
             // Control Flow instruction
             //TODO: Ccf, Scf, Nop, Halt, Stop, Di, Ei, Jp, Jr, Call, Ret, Reti, Rst
             Operation::Jp(condition, source) => {
@@ -132,6 +134,44 @@ impl Cpu {
             }
             _ => todo!(),
         }
+    }
+
+    /// Resets the bit specified by *bit* in *target* to 0.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Not affected  
+    /// `N`: Not affected  
+    /// `C`: Not affected  
+    fn res(&mut self, bit: Bit, target: Operand8) {
+        let value = self.get_operand8(target);
+        let new_value = value ^ (bit as u8);
+        self.load_u8(target, new_value);
+    }
+
+    /// Sets the bit specified by *bit* in *target* to 1.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Not affected  
+    /// `N`: Not affected  
+    /// `C`: Not affected  
+    fn set(&mut self, bit: Bit, target: Operand8) {
+        let value = self.get_operand8(target);
+        let new_value = value | (bit as u8);
+        self.load_u8(target, new_value);
+    }
+
+    /// Copies the bit specified by *bit* in *target* to the `zero` flag.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the specified bit is zero, otherwise reset  
+    /// `H`: Set  
+    /// `N`: Reset  
+    /// `C`: Not affected  
+    fn bit(&mut self, bit: Bit, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit = value.bitand(bit as u8);
+        self.registers.f.set(Flags::Z, bit == 0);
+        self.registers.f.set(Flags::H, true);
+        self.registers.f.set(Flags::N, false);
     }
 
     /// Swap the lower and higher nibbles of the value represented by *target*.  
@@ -2158,6 +2198,108 @@ mod tests {
 
         cpu.swap(Operand8::Addr(At::HL));
         assert_eq!(cpu.memory.read16(3), 0x0F);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_bit() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0xEF,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.bit(Bit::Seven, Operand8::A);
+        assert_eq!(cpu.registers.a, 0x80);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.bit(Bit::Four, Operand8::L);
+        assert_eq!(cpu.registers.l, 0xEF);
+        assert!(cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_set() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.set(Bit::Two, Operand8::A);
+        assert_eq!(cpu.registers.a, 0x84);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.set(Bit::Seven, Operand8::L);
+        assert_eq!(cpu.registers.l, 0xBB);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+    }
+
+    #[test]
+    fn test_res() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0x8A,
+                e: 16,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0xFFF8,
+                pc: 0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.res(Bit::Seven, Operand8::A);
+        assert_eq!(cpu.registers.a, 0x00);
+        assert!(!cpu.registers.f.contains(Flags::Z));
+        assert!(!cpu.registers.f.contains(Flags::N));
+        assert!(!cpu.registers.f.contains(Flags::H));
+        assert!(!cpu.registers.f.contains(Flags::C));
+
+        cpu.res(Bit::One, Operand8::L);
+        assert_eq!(cpu.registers.l, 0x39);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
