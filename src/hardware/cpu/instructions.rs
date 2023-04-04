@@ -2400,14 +2400,14 @@ pub enum Operand16 {
 
 #[derive(Copy, Clone)]
 pub enum Bit {
-    Zero,
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
+    Zero = 0b0000_0001,
+    One = 0b0000_0010,
+    Two = 0b0000_0100,
+    Three = 0b0000_1000,
+    Four = 0b0001_0000,
+    Five = 0b0010_0000,
+    Six = 0b0100_0000,
+    Seven = 0b1000_0000,
 }
 
 /// Represents all the possible operations from the instruction set
