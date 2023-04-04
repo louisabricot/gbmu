@@ -39,14 +39,14 @@ pub enum Clock {
 
 #[derive(Copy, Clone)]
 pub enum Page0 {
-    Byte0,
-    Byte1,
-    Byte2,
-    Byte3,
-    Byte4,
-    Byte5,
-    Byte6,
-    Byte7,
+    Byte0 = 0x0000,
+    Byte1 = 0x0008,
+    Byte2 = 0x0010,
+    Byte3 = 0x0018,
+    Byte4 = 0x0020,
+    Byte5 = 0x0028,
+    Byte6 = 0x0030,
+    Byte7 = 0x0038,
 }
 
 /// Represents the two possible sizes of immediate operands: either 8-bit or 16-bit
