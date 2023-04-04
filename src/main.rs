@@ -19,9 +19,9 @@ fn main() {
 
     let mut _memory = Memory::new(_content);
     let mut _mycpu = Cpu::new(_memory);
-    let mut i = 0;
-    while i < 10 {
-        _mycpu.step();
+    let vec = _mycpu.disassemble(3, 0);
+    for line in vec {
+        println!("{}", line);
     }
 }
 

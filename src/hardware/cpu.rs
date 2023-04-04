@@ -2,7 +2,7 @@ use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
-    At, Bit, Condition, Instruction, Opcode, Operand16, Operand8, Operation, Page0, Imm
+    At, Bit, Condition, Imm, Instruction, Opcode, Operand16, Operand8, Operation, Page0,
 };
 use std::ops::{BitAnd, BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
@@ -39,9 +39,9 @@ impl Cpu {
     /// Read the next byte from memory
     /// Update PC
     fn read_imm8(&mut self) -> u8 {
-        let addr = self.registers.pc;
+        let byte = self.memory.read8(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
-        self.memory.read8(addr)
+        byte
     }
 
     /// Read the next 16 bits from memory
@@ -49,9 +49,9 @@ impl Cpu {
     /// Update PC
     /// Read imm16 takes two cycles
     fn read_imm16(&mut self) -> u16 {
-        let addr = self.registers.pc;
+        let word = self.memory.read16(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(2);
-        self.memory.read16(addr)
+        word
     }
 
     fn decode(opcode: Opcode) -> Instruction {
@@ -65,21 +65,7 @@ impl Cpu {
     /// Execute an instruction
     /// TODO: returns the CPU state
     fn execute(&mut self, instruction: Instruction) {
-        let print;
-        let imm;
-
-        if instruction.operand == Some(Imm::Eight) {
-            imm = format!("{:#04x}", self.read_imm8());
-            print = instruction.mnemonic.replace("imm", &imm).clone();
-        } else if instruction.operand == Some(Imm::Sixteen) {
-            imm = format!("{:#08x}", self.read_imm16());
-            print = instruction.mnemonic.replace("imm", &imm).clone();
-
-        } else {
-            print = instruction.mnemonic.to_string().clone();
-        }
-        println!("{}", print);
-        /*match instruction.operation {
+        match instruction.operation {
             // 8-bit load instructions
             Operation::Load8(dst, src) => {
                 self.load8(dst, src);
@@ -140,7 +126,6 @@ impl Cpu {
             Operation::Res(bit, target) => self.res(bit, target),
 
             // Control Flow instruction
-            //TODO: Ret, Reti, Rst
             Operation::Ccf => self.ccf(),
             Operation::Scf => self.scf(),
             Operation::Nop => self.nop(),
@@ -154,7 +139,7 @@ impl Cpu {
             Operation::Ret(condition) => self.ret(condition),
             Operation::Reti => self.reti(),
             Operation::Rst(page) => self.rst(page),
-        }*/
+        }
     }
 
     /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
@@ -976,24 +961,48 @@ impl Cpu {
             .write16(Registers::get_register16(target), value);
     }
 
-    //TODO:
-    // Faire une fonction qui prend en parametre le nombre de ligne
-    // d'instruction a renvoyer a partir de l'addresse actuelle du CPU
-    //
-    // Les instructions doivent contenir la longueur de l'operande
-    // pour que l'on puisse parser les instructions sans les executer.
-    //
-    // Une fonction doit pouvoir retourner une string contenant
-    // l'instruction et sont operand exacte, exemple:
-    // mov eax, 0x8 # operand numerique
-    // mov eax, [0x800] # addresse a laquelle recuperer
-    // La fonction doit pouvoir recuperer cette information
-    // a partir de n'importe quelle addresse
-    //
+    fn format_instruction(&self, imm: Imm, mnemonic: &str, mut address: u16) -> (String, u16) {
+        let (value, size) = match imm {
+            Imm::Eight => (format!("{:#04x}", self.memory.read8(address)), 1),
+            Imm::Sixteen => (format!("{:#08x}", self.memory.read16(address)), 2),
+        };
+
+        return (mnemonic.replace("imm", &value).clone(), size);
+    }
+
+    pub fn disassemble(&self, lines: u16, mut address: u16) -> Vec<String> {
+        let mut mnemonics = Vec::new();
+
+        for i in 0..lines {
+            let mnemonic: String = match self.fetch(address) {
+                Ok((opcode, size)) => {
+                    let instruction = Cpu::decode(opcode);
+                    address += size;
+                    let (mnemonic, size) = match instruction.operand {
+                        Some(imm) => self.format_instruction(imm, instruction.mnemonic, address),
+                        None => (instruction.mnemonic.to_string(), 0),
+                    };
+                    address += size;
+                    mnemonic
+                }
+                Err((_, size)) => {
+                    address += size;
+                    "BAADD".to_string()
+                }
+            };
+            mnemonics.push(mnemonic);
+        }
+        mnemonics
+    }
+
     pub fn step(&mut self) {
         match self.state {
             State::Running => {
-                let opcode = self.fetch();
+                let (opcode, size) = match self.fetch(self.registers.pc) {
+                    Ok(t) => t,
+                    Err((msg, _)) => panic!("{}", msg),
+                };
+                self.registers.pc += size;
                 let instruction = Cpu::decode(opcode);
                 self.execute(instruction);
             }

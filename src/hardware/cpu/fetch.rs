@@ -4,14 +4,14 @@ use crate::Cpu;
 impl Cpu {
     /// Returns the Opcode enum matching the opcode read from memory
     /// If the opcode is 0xCB, the next byte is matched against CB-prefixed opcodes
-    pub fn fetch(&mut self) -> Opcode {
-        let opcode = self.read_imm8();
+    pub fn fetch(&self, address: u16) -> Result<(Opcode, u16), (String, u16)> {
+        let byte = self.memory.read8(address);
 
-        if opcode == 0xCB {
-            return self.fetch_cb();
+        if byte == 0xCB {
+            return self.fetch_cb(address + 1);
         }
 
-        match opcode {
+        let opcode = match byte {
             0x00 => Opcode::Nop,
             0x01 => Opcode::Ld_bc_d16,
             0x02 => Opcode::Ld_bc_a,
@@ -271,13 +271,19 @@ impl Cpu {
             0xFB => Opcode::Ei,
             0xFE => Opcode::Cp_d8,
             0xFF => Opcode::Rst_38h,
-            _ => panic!("value not part of the instruction set: {:#x}", opcode),
-        }
+            _ => {
+                return Err((
+                    format!("value not part of the instruction set: {:#x}", byte),
+                    1,
+                ))
+            }
+        };
+        Ok((opcode, 1))
     }
 
-    fn fetch_cb(&mut self) -> Opcode {
-        let opcode = self.read_imm8();
-        match opcode {
+    fn fetch_cb(&self, address: u16) -> Result<(Opcode, u16), (String, u16)> {
+        let byte = self.memory.read8(address);
+        let opcode = match byte {
             0x00 => Opcode::Rlc_b,
             0x01 => Opcode::Rlc_c,
             0x02 => Opcode::Rlc_d,
@@ -351,7 +357,7 @@ impl Cpu {
             0x45 => Opcode::Bit_0_l,
             0x46 => Opcode::Bit_0_hl,
             0x47 => Opcode::Bit_0_a,
-           
+
             0x48 => Opcode::Bit_1_b,
             0x49 => Opcode::Bit_1_c,
             0x4A => Opcode::Bit_1_d,
@@ -547,7 +553,13 @@ impl Cpu {
             0xFD => Opcode::Set_7_l,
             0xFE => Opcode::Set_7_hl,
             0xFF => Opcode::Set_7_a,
-            _ => panic!("value not part of the instruction set: 0xCB {:x}", opcode),
-        }
+            _ => {
+                return Err((
+                    format!("value not part of the instruction set: 0xCB {:x}", byte),
+                    2,
+                ))
+            }
+        };
+        Ok((opcode, 2))
     }
 }
