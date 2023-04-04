@@ -126,7 +126,7 @@ impl Cpu {
             Operation::Res(bit, target) => self.res(bit, target),
 
             // Control Flow instruction
-            //TODO: Jp, Jr, Call, Ret, Reti, Rst
+            //TODO: Ret, Reti, Rst
             Operation::Ccf => self.ccf(),
             Operation::Scf => self.scf(),
             Operation::Nop => self.nop(),
@@ -136,7 +136,39 @@ impl Cpu {
             Operation::Ei => self.ei(),
             Operation::Jp(condition, source) => self.absolute_jump(condition, source),
             Operation::Jr(condition) => self.relative_jump(condition),
+            Operation::Call(condition, source) => self.call(condition, source),
+            Operation::Ret(condition) => self.ret(condition),
             _ => todo!(),
+        }
+    }
+
+    /// If *condition* is true, pops from the memory stack the 16-bit value and loads that value
+    /// onto `Program Counter`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Not affected  
+    /// `N`: Not affected  
+    /// `C`: Not affected  
+    fn ret(&mut self, condition: Condition) {
+        let address = todo!();
+        if self.registers.f.check_condition(condition) {
+            self.registers.pc = address;
+        }
+    }
+    /// If *condition* is true, pushes `Program Counter` of the next instruction on the stack and loads *source* onto `Program Counter`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `H`: Not affected  
+    /// `N`: Not affected  
+    /// `C`: Not affected  
+    fn call(&mut self, condition: Condition, source: Operand16) {
+        let opcode_len = if condition == Condition::Always { 3 } else { 5 };
+        let address = self.get_operand16(source);
+        if self.registers.f.check_condition(condition) {
+            self.registers.sp = self.registers.sp.wrapping_sub(2);
+            self.memory
+                .write16(self.registers.sp, self.registers.pc + opcode_len);
+            self.registers.pc = address;
         }
     }
 
@@ -774,7 +806,7 @@ impl Cpu {
     /// `N`: Not affected  
     /// `C`: Not affected  
     fn relative_jump(&mut self, condition: Condition) {
-        let steps = self.memory.read8(self.registers.pc) as u16;
+        let steps = self.read_imm8() as u16;
         if self.registers.f.check_condition(condition) {
             self.registers.pc += steps;
         }
@@ -2481,20 +2513,44 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 55, 147, 0xF0, 2, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.relative_jump(Condition::Always);
-        assert_eq!(cpu.registers.pc, 2);
+        assert_eq!(cpu.registers.pc, 3);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.relative_jump(Condition::Always);
-        assert_eq!(cpu.registers.pc, 149);
+        assert_eq!(cpu.registers.pc, 0xF4);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
+    }
+
+    #[test]
+    fn call() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0,
+                e: 0x4,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0x3,
+                pc: 0x800,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+        cpu.call(Condition::Always, Operand16::DE);
+        assert_eq!(cpu.registers.pc, 0x4);
+        assert_eq!(cpu.registers.sp, 0x1);
+        assert_eq!(cpu.memory.read16(cpu.registers.sp), 0x803);
     }
 }
