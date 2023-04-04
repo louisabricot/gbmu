@@ -2,7 +2,7 @@ use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
-    At, Bit, Condition, Instruction, Opcode, Operand16, Operand8, Operation,
+    At, Bit, Condition, Instruction, Opcode, Operand16, Operand8, Operation, Page0, Imm
 };
 use std::ops::{BitAnd, BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
@@ -65,7 +65,21 @@ impl Cpu {
     /// Execute an instruction
     /// TODO: returns the CPU state
     fn execute(&mut self, instruction: Instruction) {
-        match instruction.operation {
+        let print;
+        let imm;
+
+        if instruction.operand == Some(Imm::Eight) {
+            imm = format!("{:#04x}", self.read_imm8());
+            print = instruction.mnemonic.replace("imm", &imm).clone();
+        } else if instruction.operand == Some(Imm::Sixteen) {
+            imm = format!("{:#08x}", self.read_imm16());
+            print = instruction.mnemonic.replace("imm", &imm).clone();
+
+        } else {
+            print = instruction.mnemonic.to_string().clone();
+        }
+        println!("{}", print);
+        /*match instruction.operation {
             // 8-bit load instructions
             Operation::Load8(dst, src) => {
                 self.load8(dst, src);
@@ -138,8 +152,26 @@ impl Cpu {
             Operation::Jr(condition) => self.relative_jump(condition),
             Operation::Call(condition, source) => self.call(condition, source),
             Operation::Ret(condition) => self.ret(condition),
-            _ => todo!(),
-        }
+            Operation::Reti => self.reti(),
+            Operation::Rst(page) => self.rst(page),
+        }*/
+    }
+
+    /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
+    /// `Program Counter`.
+    fn rst(&mut self, address: Page0) {
+        self.registers.sp = self.registers.sp.wrapping_sub(2);
+        self.memory.write16(self.registers.sp, self.registers.pc);
+        self.registers.pc = address as u16;
+    }
+
+    /// Pops the 16-bit value on the top of memory stack and loads it onto `Program Counter`.  
+    /// Enables the Master Interrupt flag.  
+    fn reti(&mut self) {
+        let address = self.memory.read16(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(2);
+        self.registers.pc = address;
+        //ime = 1;
     }
 
     /// If *condition* is true, pops from the memory stack the 16-bit value and loads that value
@@ -2576,5 +2608,28 @@ mod tests {
         cpu.ret(Condition::Always);
         //assert_eq!(cpu.registers.pc, 0x03);
         assert_eq!(cpu.registers.sp, 0x5);
+    }
+
+    #[test]
+    fn test_rst() {
+        let mut cpu = Cpu {
+            registers: Registers {
+                a: 0x80,
+                b: 0x85,
+                c: 3,
+                d: 0,
+                e: 0x04,
+                f: Flags::empty(),
+                h: 0,
+                l: 0x3B,
+                sp: 0x3,
+                pc: 0x0,
+            },
+            state: State::Running,
+            memory: Memory::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+        };
+
+        cpu.rst(Page0::Byte1);
+        assert_eq!(cpu.registers.pc, 0x0008);
     }
 }

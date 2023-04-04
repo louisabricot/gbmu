@@ -19,7 +19,10 @@ fn main() {
 
     let mut _memory = Memory::new(_content);
     let mut _mycpu = Cpu::new(_memory);
-    _mycpu.step();
+    let mut i = 0;
+    while i < 10 {
+        _mycpu.step();
+    }
 }
 
 #[cfg(test)]

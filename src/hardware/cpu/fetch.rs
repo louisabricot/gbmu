@@ -271,7 +271,7 @@ impl Cpu {
             0xFB => Opcode::Ei,
             0xFE => Opcode::Cp_d8,
             0xFF => Opcode::Rst_38h,
-            _ => panic!("value not part of the instruction set: {:?}", opcode),
+            _ => panic!("value not part of the instruction set: {:#x}", opcode),
         }
     }
 
@@ -351,7 +351,7 @@ impl Cpu {
             0x45 => Opcode::Bit_0_l,
             0x46 => Opcode::Bit_0_hl,
             0x47 => Opcode::Bit_0_a,
-            /*
+           
             0x48 => Opcode::Bit_1_b,
             0x49 => Opcode::Bit_1_c,
             0x4A => Opcode::Bit_1_d,
@@ -547,7 +547,6 @@ impl Cpu {
             0xFD => Opcode::Set_7_l,
             0xFE => Opcode::Set_7_hl,
             0xFF => Opcode::Set_7_a,
-            */
             _ => panic!("value not part of the instruction set: 0xCB {:x}", opcode),
         }
     }
