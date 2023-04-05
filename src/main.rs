@@ -2,8 +2,8 @@ use std::env;
 use std::fs;
 
 mod hardware;
-use crate::hardware::cpu::Cpu;
-use crate::hardware::memory::Memory;
+use hardware::cpu::Cpu;
+use hardware::memory::Memory;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
