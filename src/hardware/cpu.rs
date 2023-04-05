@@ -36,24 +36,24 @@ impl Cpu {
         }
     }
 
-    /// Read the next byte from memory
-    /// Update PC
+    /// Reads from the 8-bit immediate value from `Program Counter`.  
+    /// Increments the `Program Counter` by 1.  
     fn read_imm8(&mut self) -> u8 {
         let byte = self.memory.read8(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
         byte
     }
 
-    /// Read the next 16 bits from memory
-    /// Convert the value from little endian to big endian
-    /// Update PC
-    /// Read imm16 takes two cycles
+    /// Reads from the 16-bit immediate value from `Program Counter`.  
+    /// Increments the `Program Counter` by 2.  
     fn read_imm16(&mut self) -> u16 {
         let word = self.memory.read16(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(2);
         word
     }
 
+    /// Returns the `Instruction` matching *opcode*.  
+    /// If the opcode does not match any instructions, the function panics.  
     fn decode(opcode: Opcode) -> Instruction {
         let instruction = Instruction::get_by_opcode(opcode);
         match instruction {
@@ -62,34 +62,43 @@ impl Cpu {
         }
     }
 
-    /// Execute an instruction
+    /// TODO
+    pub fn step(&mut self) {
+        match self.state {
+            State::Running => {
+                let (opcode, size) = match self.fetch(self.registers.pc) {
+                    Ok(t) => t,
+                    Err((msg, _)) => panic!("{}", msg),
+                };
+                self.registers.pc += size;
+                let instruction = Cpu::decode(opcode);
+                self.execute(instruction);
+            }
+            State::Halt => {
+                todo!();
+            }
+            State::Interrupt => {
+                todo!();
+            }
+            State::Stop => {
+                todo!();
+            }
+        }
+    }
+
     /// TODO: returns the CPU state
     fn execute(&mut self, instruction: Instruction) {
         match instruction.operation {
-            // 8-bit load instructions
-            Operation::Load8(dst, src) => {
-                self.load8(dst, src);
-            }
+            Operation::Load8(dst, src) => self.load8(dst, src),
+            Operation::Load8Dec(dst, src) => self.load8dec(dst, src),
+            Operation::Load8Inc(dst, src) => self.load8inc(dst, src),
 
-            Operation::Load8Dec(dst, src) => {
-                self.load8(dst, src);
-                let hl = self.registers.read16(Register16::HL);
-                self.registers.write16(Register16::HL, hl - 1);
-            }
-            Operation::Load8Inc(dst, src) => {
-                self.load8(dst, src);
-                let hl = self.registers.read16(Register16::HL);
-                self.registers.write16(Register16::HL, hl + 1);
-            }
-
-            // 16-bit load instructions
             Operation::Load16(dst, src) => self.load16(dst, src),
             Operation::Push(target) => self.push(target),
             Operation::Pop(target) => self.pop(target),
 
-            // 8-bit arithmetic and logical instructions
             Operation::Add8(source) => self.add8(source),
-            Operation::Adc(source) => self.adc8(source),
+            Operation::Adc(source) => self.adc(source),
             Operation::Sub(source) => self.sub(source),
             Operation::Sbc(source) => self.sbc(source),
             Operation::And(source) => self.and(source),
@@ -101,14 +110,12 @@ impl Cpu {
             Operation::Daa => self.daa(),
             Operation::Cpl => self.cpl(),
 
-            // 16-bit arithmetic/logic instructions
             Operation::AddHL_r16(source) => self.addHL_r16(source),
             Operation::Inc16(target) => self.inc16(target),
             Operation::Dec16(target) => self.dec16(target),
             Operation::AddSP_dd => self.addSP_dd(),
             Operation::LoadHL => self.loadHL(),
 
-            // Rotate, shift and bit operations
             Operation::Rlca => self.rlca(),
             Operation::Rla => self.rla(),
             Operation::Rrca => self.rrca(),
@@ -125,7 +132,6 @@ impl Cpu {
             Operation::Set(bit, target) => self.set(bit, target),
             Operation::Res(bit, target) => self.res(bit, target),
 
-            // Control Flow instruction
             Operation::Ccf => self.ccf(),
             Operation::Scf => self.scf(),
             Operation::Nop => self.nop(),
@@ -133,8 +139,8 @@ impl Cpu {
             Operation::Stop => self.stop(),
             Operation::Di => self.di(),
             Operation::Ei => self.ei(),
-            Operation::Jp(condition, source) => self.absolute_jump(condition, source),
-            Operation::Jr(condition) => self.relative_jump(condition),
+            Operation::Jp(condition, source) => self.jp(condition, source),
+            Operation::Jr(condition) => self.jr(condition),
             Operation::Call(condition, source) => self.call(condition, source),
             Operation::Ret(condition) => self.ret(condition),
             Operation::Reti => self.reti(),
@@ -142,436 +148,101 @@ impl Cpu {
         }
     }
 
-    /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
-    /// `Program Counter`.
-    fn rst(&mut self, address: Page0) {
-        self.registers.sp = self.registers.sp.wrapping_sub(2);
-        self.memory.write16(self.registers.sp, self.registers.pc);
-        self.registers.pc = address as u16;
+    // 8-bit load instructions
+
+    /// Loads the value represented by *source* into *destination*.  
+    /// This function calls `get_operand8` to read the value from source and `load_u8` to load it
+    /// into *destination*.  
+    /// `Flag Register` is not affected.  
+    fn load8(&mut self, destination: Operand8, source: Operand8) {
+        let value = self.get_operand8(source);
+        self.load_u8(destination, value);
     }
 
-    /// Pops the 16-bit value on the top of memory stack and loads it onto `Program Counter`.  
-    /// Enables the Master Interrupt flag.  
-    fn reti(&mut self) {
-        let address = self.memory.read16(self.registers.sp);
-        self.registers.sp = self.registers.sp.wrapping_add(2);
-        self.registers.pc = address;
-        //ime = 1;
-    }
-
-    /// If *condition* is true, pops from the memory stack the 16-bit value and loads that value
-    /// onto `Program Counter`.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Not affected  
-    /// `N`: Not affected  
-    /// `C`: Not affected  
-    fn ret(&mut self, condition: Condition) {
-        let address = self.memory.read16(self.registers.sp);
-        self.registers.sp = self.registers.sp.wrapping_add(2);
-        if self.registers.f.check_condition(condition) {
-            self.registers.pc = address;
-        }
-    }
-    /// If *condition* is true, pushes `Program Counter` of the next instruction on the stack and loads *source* onto `Program Counter`.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Not affected  
-    /// `N`: Not affected  
-    /// `C`: Not affected  
-    fn call(&mut self, condition: Condition, source: Operand16) {
-        let opcode_len = if condition == Condition::Always { 3 } else { 5 };
-        let address = self.get_operand16(source);
-        if self.registers.f.check_condition(condition) {
-            self.registers.sp = self.registers.sp.wrapping_sub(2);
-            self.memory
-                .write16(self.registers.sp, self.registers.pc + opcode_len);
-            self.registers.pc = address;
+    /// Loads the 8-bit *data* into *destination*.  
+    /// If *destination* is either the 8-bit register `A`, `B`, `C`, `D`, `E`, `H`, `L`
+    /// or an address (represented by `Addr(at)`), data is loaded.
+    /// Otherwise, the function panics.
+    fn load_u8(&mut self, destination: Operand8, data: u8) {
+        match destination {
+            Operand8::A => self.registers.a = data,
+            Operand8::B => self.registers.b = data,
+            Operand8::C => self.registers.c = data,
+            Operand8::D => self.registers.d = data,
+            Operand8::E => self.registers.e = data,
+            Operand8::H => self.registers.h = data,
+            Operand8::L => self.registers.l = data,
+            Operand8::Addr(at) => {
+                let address = self.get_address(at);
+                self.memory.write8(address, data);
+            }
+            _ => panic!("Not a valid Operand8 for load_u8()"),
         }
     }
 
-    /// Disables interrupts
-    fn di(&mut self) {
-        todo!();
+    /// Loads the value of *source* into *destination* and decrements the value of the 16-bit
+    /// register `HL`.  
+    fn load8dec(&mut self, destination: Operand8, source: Operand8) {
+        self.load8(destination, source);
+        let new_value = self.registers.read16(Register16::HL).wrapping_sub(1);
+        self.registers.write16(Register16::HL, new_value);
     }
 
-    /// Enables interrupts
-    fn ei(&mut self) {
-        todo!();
-    }
-    /// Stops both the system clock and the oscillator circuit.  
-    /// Stop mode stops the LCD controller.  
-    /// Stop mode is canceled by a reset signal.
-    fn stop(&mut self) {
-        self.state = State::Stop;
-        todo!();
+    /// Loads the value of *source* into *destination* and increments the value of the 16-bit
+    /// register `HL`.  
+    fn load8inc(&mut self, destination: Operand8, source: Operand8) {
+        self.load8(destination, source);
+        let new_value = self.registers.read16(Register16::HL).wrapping_add(1);
+        self.registers.write16(Register16::HL, new_value);
     }
 
-    /// Stops the system clock and enters HALT mode.  
-    /// HALT mode is canceled by an interrupt or a reset signal.  
-    /// Although the system clock is stopped in this state, the oscillator circuit and LCD
-    /// controller continue to operate.  
-    fn halt(&mut self) {
-        self.state = State::Halt;
-        todo!();
+    // 16-bit load instructions
+
+    /// Loads the 16-bit *source* into *destination*.  
+    /// If *destination* is either the 16-bit register `BC`, `DE`, `HL`, `SP`
+    /// or an address (represented by `Addr(at)`), data is loaded.
+    /// Otherwise, the function panics.
+    fn load16(&mut self, destination: Operand16, source: Operand16) {
+        let data = self.get_operand16(source);
+        match destination {
+            Operand16::BC => self.registers.write16(Register16::BC, data),
+            Operand16::DE => self.registers.write16(Register16::DE, data),
+            Operand16::HL => self.registers.write16(Register16::HL, data),
+            Operand16::SP => self.registers.sp = data,
+            Operand16::Addr(At) => {
+                let address = self.get_address(At);
+                self.memory.write16(address, data);
+            }
+            _ => panic!("Not a valid Operand16 for load16()"),
+        }
     }
 
-    /// Does nothing.  
-    fn nop(&mut self) {
-        todo!();
-    }
-
-    /// Sets the `carry` flag.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Toggled  
-    fn scf(&mut self) {
-        self.registers.f.set(Flags::C, true);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Toggles the `carry` flag.  
-    /// If `carry` flag is set, then reset it.  
-    /// If `carry` flag is reset, then set it.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Toggled  
-    fn ccf(&mut self) {
-        self.registers.f.toggle(Flags::C);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Resets the bit specified by *bit* in *target* to 0.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Not affected  
-    /// `N`: Not affected  
-    /// `C`: Not affected  
-    fn res(&mut self, bit: Bit, target: Operand8) {
-        let value = self.get_operand8(target);
-        let new_value = value ^ (bit as u8);
-        self.load_u8(target, new_value);
-    }
-
-    /// Sets the bit specified by *bit* in *target* to 1.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Not affected  
-    /// `N`: Not affected  
-    /// `C`: Not affected  
-    fn set(&mut self, bit: Bit, target: Operand8) {
-        let value = self.get_operand8(target);
-        let new_value = value | (bit as u8);
-        self.load_u8(target, new_value);
-    }
-
-    /// Copies the bit specified by *bit* in *target* to the `zero` flag.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the specified bit is zero, otherwise reset  
-    /// `H`: Set  
-    /// `N`: Reset  
-    /// `C`: Not affected  
-    fn bit(&mut self, bit: Bit, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit = value.bitand(bit as u8);
-        self.registers.f.set(Flags::Z, bit == 0);
-        self.registers.f.set(Flags::H, true);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Swap the lower and higher nibbles of the value represented by *target*.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Reset  
-    fn swap(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-
-        let swapped = value >> 4 | value << 4;
-
-        self.load_u8(target, swapped);
-
-        self.registers.f.set(Flags::C, false);
-        self.registers.f.set(Flags::Z, swapped == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-    /// Rotates the content of *target* to the right.  
-    /// Copies bit0 to the `carry` flag and resets bit7.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
-    fn srl(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit0 = value & 1;
-        let new_value = value >> 1;
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit0 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of *target* to the right.  
-    /// Copies bit0 to the `carry` flag and preserves bit7.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
-    fn sra(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit0 = value & 1;
-        let bit7 = value >> 7;
-        let new_value = value >> 1 | bit7 << 7;
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit0 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of *target* to the left.  
-    /// Copies bit7 into the `carry` flag and resets bit0.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
-    fn sla(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit7 = value >> 7;
-        let new_value = value << 1;
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit7 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of *target* to the right.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
-    fn rr(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit0 = value & 1;
-        let new_value = value >> 1;
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit0 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of *target* to the right.  
-    /// Wraps the truncated bit to the end of the resulting integer.   
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
-    fn rrc(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit0 = value & 1;
-        let new_value = value.rotate_right(1);
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit0 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of *target* to the left.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
-    fn rl(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit7 = value >> 7;
-        let new_value = value << 1;
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit7 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of *target* to the left.  
-    /// Wraps the truncated bit to the begining of the resulting integer.   
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
-    fn rlc(&mut self, target: Operand8) {
-        let value = self.get_operand8(target);
-        let bit7 = value >> 7;
-        let new_value = value.rotate_left(1);
-
-        self.load_u8(target, new_value);
-
-        self.registers.f.set(Flags::C, bit7 == 1);
-        self.registers.f.set(Flags::Z, new_value == 0);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of the 8-bit register `A` to the right.   
-    /// Places the content of bit0 both in the `carry` flag and bit 7.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
-    fn rrca(&mut self) {
-        let bit0 = self.registers.a & 1;
-
-        self.registers.a = self.registers.a.rotate_right(1);
-        self.registers.f.set(Flags::C, bit0 == 1);
-        self.registers.f.set(Flags::Z, false);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Rotates the content of the 8-bit register `A` to the left.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
-
-    fn rla(&mut self) {
-        let bit7 = self.registers.a >> 7;
-
-        self.registers.a = self.registers.a.rotate_left(1);
-
-        self.registers.f.set(Flags::C, bit7 == 1);
-        self.registers.f.set(Flags::Z, false);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-    /// Rotates the content of the 8-bit register `A` to the left.  
-    /// Places the content of bit7 both in the `carry` flag and bit 0.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Reset  
-    /// `H`: Reset  
-    /// `N`: Reset  
-    /// `C`: Set if bit7 is 1 before the rotation  
-    fn rlca(&mut self) {
-        let bit7 = self.registers.a >> 7;
-
-        self.registers.a = self.registers.a.rotate_left(1);
-
-        self.registers.f.set(Flags::C, bit7 == 1);
-        self.registers.f.set(Flags::Z, false);
-        self.registers.f.set(Flags::H, false);
-        self.registers.f.set(Flags::N, false);
-    }
-
-    /// Loads the sum of `SP` and the 8-bit immediate value to the 16-bit register `HL`.  
-    /// `Flag Register` is updated as follows:  
-    /// `Z`: Reset  
-    /// `H`: Set if there is a carry from bit 11, otherwise reset  
-    /// `N`: Reset  
-    /// `C`: Set if there is a carry from bit 15, otherwise reset  
-    fn loadHL(&mut self) {
-        let value = self.read_imm8() as u16;
-
-        let (result, carry) = self.registers.sp.overflowing_add(value);
-        let half_carry = (self.registers.sp & 0x0FFF)
-            .checked_add(value | 0xF000)
-            .is_none();
-
-        self.registers.write16(Register16::HL, result);
-        self.registers.f.set(Flags::Z, false);
-        self.registers.f.set(Flags::H, half_carry);
-        self.registers.f.set(Flags::N, false);
-        self.registers.f.set(Flags::C, carry);
-    }
-
-    /// Add to Stack Pointer the 8-bit immediate value
-    /// Flags affected:
-    /// Z: Reset
-    /// N: Reset
-    /// H: Set if there is a carry on bit7, otherwise reset
-    /// C: Set if there is a carry on bit15, otherwise reset
-    fn addSP_dd(&mut self) {
-        let value = self.read_imm8() as u16;
-
-        let (result, carry) = self.registers.pc.overflowing_add(value);
-
-        let half_carry = (self.registers.sp & 0x0FFF)
-            .checked_add(value | 0xF000)
-            .is_none();
-        self.registers.pc = result;
-        self.registers.f.set(Flags::Z, false);
-        self.registers.f.set(Flags::N, false);
-        self.registers.f.set(Flags::H, half_carry);
-        self.registers.f.set(Flags::C, carry);
-    }
-
-    /// Increments data represented by `target` by 1.  
-    /// `Flag Register` is not updated.  
-    fn inc16(&mut self, target: Operand16) {
-        let mut value = self.registers.read16(Registers::get_register16(target));
-        value = value.wrapping_add(1);
-        self.registers
-            .write16(Registers::get_register16(target), value);
-    }
-
-    /// Decrements data represented by `target` by 1.  
-    /// `Flag Register` is not updated.  
-    fn dec16(&mut self, target: Operand16) {
-        let mut value = self.registers.read16(Registers::get_register16(target));
-        value = value.wrapping_sub(1);
-        self.registers
-            .write16(Registers::get_register16(target), value);
-    }
-
-    /// Add to register HL, the content of the source register
-    /// The Flags are affected as follows:
-    /// Z: Not affected
-    /// H: Set if there is a carry from bit11, otherwise reset
-    /// N: Reset
-    /// C: Set if there is a carry from bit5, otherwise reset
-    fn addHL_r16(&mut self, source: Operand16) {
+    /// Pushes to the stack memory, the 16-bit *source*.  
+    /// Before and after writing to memory, the stack pointer `sp` is decremented.  
+    /// If *source* is not one of the 16-bit registers `AF`, `BC`, `DE` or `HL`, the function
+    /// `Registers::get_register16()` panics.
+    fn push(&mut self, source: Operand16) {
         let value = self.registers.read16(Registers::get_register16(source));
-        let target = self.registers.read16(Register16::HL);
 
-        let (result, carry) = u16::overflowing_add(target, value);
-        let half_carry = u8::checked_add((target & 0x00FF) as u8, (value & 0x00FF) as u8).is_none();
-
-        self.registers.write16(Register16::HL, result);
-        self.registers.f.set(Flags::N, false);
-        self.registers.f.set(Flags::H, half_carry);
-        self.registers.f.set(Flags::C, carry);
+        self.registers.sp = self.registers.sp.wrapping_sub(1);
+        self.memory.write16(self.registers.sp, value);
+        self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
+
+    /// Pops to the 16-bit register *target*, 16-bit of data pointed to by stack pointer `sp`.  
+    /// After reading the stack memory, `sp` is incremented by 2.  
+    /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
+    /// `Registers::get_register16()` panics.
+    fn pop(&mut self, target: Operand16) {
+        let value = self.memory.read16(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(2);
+
+        self.registers
+            .write16(Registers::get_register16(target), value);
+    }
+
+    // 8-bit arithmetic and logic instructions
+
     /// Flips all the bits in the 8-bit register `A`.  
     /// `Flag Register` is updated as follows:  
     /// `Z`: Not affected  
@@ -583,18 +254,16 @@ impl Cpu {
         self.registers.f.set(Flags::N, true);
         self.registers.f.set(Flags::H, true);
     }
+
     /// The DAA instruction adjusts the result of a binary addition or substraction to obtain the
     /// Binary Coded Decimal representation.
-    /// The Flag Register is updated as follows:
-    /// C: Set if there is carry from bit7, otherwise reset
-    /// N: Not affected
-    /// H: Reset
-    /// Z: Set if the result is 0, otherwise reset
-    ///
+    /// `Flag Register` is updated as follows:
+    /// `Z`: Set if the result is 0, otherwise reset
+    /// `N`: Not affected
+    /// `H`: Reset
+    /// `C`: Set if there is carry from bit7, otherwise reset
     fn daa(&mut self) {
         if self.registers.f.contains(Flags::N) {
-            //SUB or SBC
-
             if self.registers.f.contains(Flags::C) {
                 if self.registers.f.contains(Flags::H) {
                     self.registers.a = self.registers.a.wrapping_add(0x9A);
@@ -605,7 +274,6 @@ impl Cpu {
                 self.registers.a = self.registers.a.wrapping_add(0xFA);
             }
         } else {
-            //ADD or ADC
             if self.registers.f.contains(Flags::H) || self.registers.a & 0x0F > 0x09 {
                 self.registers.a = self.registers.a.wrapping_add(0x06);
             }
@@ -633,9 +301,7 @@ impl Cpu {
         let result = value.wrapping_sub(1);
 
         self.registers.f.set(Flags::Z, result == 0);
-
         self.registers.f.set(Flags::N, true);
-
         self.registers.f.set(Flags::H, half_carry);
 
         self.load_u8(target, result);
@@ -704,7 +370,6 @@ impl Cpu {
         self.registers.a.bitxor_assign(&value);
 
         self.registers.f.set(Flags::Z, self.registers.a == 0);
-
         self.registers.f.set(Flags::N, false);
         self.registers.f.set(Flags::H, false);
         self.registers.f.set(Flags::C, false);
@@ -721,13 +386,9 @@ impl Cpu {
         let value = self.get_operand8(source);
 
         self.registers.a.bitand_assign(&value);
-
         self.registers.f.set(Flags::Z, self.registers.a == 0);
-
         self.registers.f.set(Flags::H, true);
-
         self.registers.f.set(Flags::N, false);
-
         self.registers.f.set(Flags::C, false);
     }
 
@@ -759,7 +420,7 @@ impl Cpu {
     /// Adds *source* and the `carry flag` to the 8-bit register `A`, and stores the result
     /// back into `A`.  
     /// Calls `add_u8_to_A` with the value returned by `get_operand8` and the `carry` flag.  
-    fn adc8(&mut self, source: Operand8) {
+    fn adc(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
         self.add_u8_to_A(carry + value);
@@ -768,8 +429,8 @@ impl Cpu {
     /// Substracts the 8-bit *data* from the 8-bit register `A` and returns the result.  
     /// `FlagRegister` is updated as follows:  
     /// `Z`: Set if the result is 0, otherwise reset  
-    /// `H`: Set if there is a carry from bit3, otherwise reset  
     /// `N`: Set  
+    /// `H`: Set if there is a carry from bit3, otherwise reset  
     /// `C`: Set if there is a carry from bit7, otherwise reset  
     fn sub_u8(&mut self, data: u8) -> u8 {
         let (result, overflow) = self.registers.a.overflowing_sub(data);
@@ -777,13 +438,9 @@ impl Cpu {
         let half_carry = (self.registers.a & 0x0F).checked_sub(data & 0x0F).is_none();
 
         self.registers.f.set(Flags::Z, result == 0);
-
         self.registers.f.set(Flags::H, half_carry);
-
         self.registers.f.set(Flags::N, true);
-
         self.registers.f.set(Flags::C, overflow);
-
         result
     }
 
@@ -804,13 +461,395 @@ impl Cpu {
         self.registers.a = self.sub_u8(value + carry);
     }
 
-    /// Loads the value of *source* to the `Program Counter` if *condition* is true.  
-    /// `FlagRegister` is updated as follows:  
+    // 16-bit arithmetic and logic instructions
+
+    /// Loads the sum of `SP` and the 8-bit immediate value to the 16-bit register `HL`.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `N`: Reset  
+    /// `H`: Set if there is a carry from bit 11, otherwise reset  
+    /// `C`: Set if there is a carry from bit 15, otherwise reset  
+    fn loadHL(&mut self) {
+        let value = self.read_imm8() as u16;
+
+        let (result, carry) = self.registers.sp.overflowing_add(value);
+        let half_carry = (self.registers.sp & 0x0FFF)
+            .checked_add(value | 0xF000)
+            .is_none();
+
+        self.registers.write16(Register16::HL, result);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, half_carry);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::C, carry);
+    }
+
+    /// Add to `Stack Pointer` the 8-bit immediate value.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `N`: Reset  
+    /// `H`: Set if there is a carry on bit7, otherwise reset  
+    /// `C`: Set if there is a carry on bit15, otherwise reset  
+    fn addSP_dd(&mut self) {
+        let value = self.read_imm8() as u16;
+
+        let (result, carry) = self.registers.pc.overflowing_add(value);
+
+        let half_carry = (self.registers.sp & 0x0FFF)
+            .checked_add(value | 0xF000)
+            .is_none();
+        self.registers.pc = result;
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, half_carry);
+        self.registers.f.set(Flags::C, carry);
+    }
+
+    /// Increments data represented by `target` by 1.  
+    /// `Flag Register` is not updated.  
+    fn inc16(&mut self, target: Operand16) {
+        let mut value = self.registers.read16(Registers::get_register16(target));
+        value = value.wrapping_add(1);
+        self.registers
+            .write16(Registers::get_register16(target), value);
+    }
+
+    /// Decrements data represented by `target` by 1.  
+    /// `Flag Register` is not updated.  
+    fn dec16(&mut self, target: Operand16) {
+        let mut value = self.registers.read16(Registers::get_register16(target));
+        value = value.wrapping_sub(1);
+        self.registers
+            .write16(Registers::get_register16(target), value);
+    }
+
+    /// Adds *source* to 16-bit register `HL`.  
+    /// `Flag Register` are updated as follows:  
     /// `Z`: Not affected  
-    /// `H`: Not affected  
-    /// `N`: Not affected  
+    /// `H`: Set if there is a carry from bit11, otherwise reset  
+    /// `N`: Reset  
+    /// `C`: Set if there is a carry from bit5, otherwise reset  
+    fn addHL_r16(&mut self, source: Operand16) {
+        let value = self.registers.read16(Registers::get_register16(source));
+        let target = self.registers.read16(Register16::HL);
+
+        let (result, carry) = u16::overflowing_add(target, value);
+        let half_carry = u8::checked_add((target & 0x00FF) as u8, (value & 0x00FF) as u8).is_none();
+
+        self.registers.write16(Register16::HL, result);
+        self.registers.f.set(Flags::N, false);
+        self.registers.f.set(Flags::H, half_carry);
+        self.registers.f.set(Flags::C, carry);
+    }
+
+    // Rotate and shift instructions
+
+    /// Swap the lower and higher nibbles of the value represented by *target*.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Reset  
+    fn swap(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+
+        let swapped = value >> 4 | value << 4;
+
+        self.load_u8(target, swapped);
+
+        self.registers.f.set(Flags::C, false);
+        self.registers.f.set(Flags::Z, swapped == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the right.  
+    /// Copies bit0 to the `carry` flag and resets bit7.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn srl(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit0 = value & 1;
+        let new_value = value >> 1;
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the right.  
+    /// Copies bit0 to the `carry` flag and preserves bit7.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn sra(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit0 = value & 1;
+        let bit7 = value >> 7;
+        let new_value = value >> 1 | bit7 << 7;
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the left.  
+    /// Copies bit7 into the `carry` flag and resets bit0.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
+    fn sla(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit7 = value >> 7;
+        let new_value = value << 1;
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the right.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn rr(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit0 = value & 1;
+        let new_value = value >> 1;
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the right.  
+    /// Wraps the truncated bit to the end of the resulting integer.   
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn rrc(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit0 = value & 1;
+        let new_value = value.rotate_right(1);
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the left.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
+    fn rl(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit7 = value >> 7;
+        let new_value = value << 1;
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of *target* to the left.  
+    /// Wraps the truncated bit to the begining of the resulting integer.   
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the result is 0, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
+    fn rlc(&mut self, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit7 = value >> 7;
+        let new_value = value.rotate_left(1);
+
+        self.load_u8(target, new_value);
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, new_value == 0);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of the 8-bit register `A` to the right.   
+    /// Places the content of bit0 both in the `carry` flag and bit 7.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit0 is 1 before the rotation, otherwise reset  
+    fn rrca(&mut self) {
+        let bit0 = self.registers.a & 1;
+
+        self.registers.a = self.registers.a.rotate_right(1);
+        self.registers.f.set(Flags::C, bit0 == 1);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of the 8-bit register `A` to the left.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit7 is 1 before the rotation, otherwise reset  
+    fn rla(&mut self) {
+        let bit7 = self.registers.a >> 7;
+
+        self.registers.a = self.registers.a.rotate_left(1);
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Rotates the content of the 8-bit register `A` to the left.  
+    /// Places the content of bit7 both in the `carry` flag and bit 0.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Reset  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Set if bit7 is 1 before the rotation  
+    fn rlca(&mut self) {
+        let bit7 = self.registers.a >> 7;
+
+        self.registers.a = self.registers.a.rotate_left(1);
+
+        self.registers.f.set(Flags::C, bit7 == 1);
+        self.registers.f.set(Flags::Z, false);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    // Single-bit operation instructions
+
+    /// Copies the bit specified by *bit* in *target* to the `zero` flag.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Set if the specified bit is zero, otherwise reset  
+    /// `N`: Reset  
+    /// `H`: Set  
     /// `C`: Not affected  
-    fn absolute_jump(&mut self, condition: Condition, source: Operand16) {
+    fn bit(&mut self, bit: Bit, target: Operand8) {
+        let value = self.get_operand8(target);
+        let bit = value.bitand(bit as u8);
+        self.registers.f.set(Flags::Z, bit == 0);
+        self.registers.f.set(Flags::H, true);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Sets the bit specified by *bit* in *target* to 1.  
+    /// `Flag Register` is not updated.  
+    fn set(&mut self, bit: Bit, target: Operand8) {
+        let value = self.get_operand8(target);
+        let new_value = value | (bit as u8);
+        self.load_u8(target, new_value);
+    }
+
+    /// Resets the bit specified by *bit* in *target* to 0.  
+    /// `Flag Register` is not updated.  
+    fn res(&mut self, bit: Bit, target: Operand8) {
+        let value = self.get_operand8(target);
+        let new_value = value ^ (bit as u8);
+        self.load_u8(target, new_value);
+    }
+
+    // CPU Control instructions
+
+    /// Toggles the `carry` flag.  
+    /// If `carry` flag is set, then reset it.  
+    /// If `carry` flag is reset, then set it.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Toggled  
+    fn ccf(&mut self) {
+        self.registers.f.toggle(Flags::C);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Sets the `carry` flag.  
+    /// `Flag Register` is updated as follows:  
+    /// `Z`: Not affected  
+    /// `N`: Reset  
+    /// `H`: Reset  
+    /// `C`: Toggled  
+    fn scf(&mut self) {
+        self.registers.f.set(Flags::C, true);
+        self.registers.f.set(Flags::H, false);
+        self.registers.f.set(Flags::N, false);
+    }
+
+    /// Stops the system clock and enters HALT mode.  
+    /// HALT mode is canceled by an interrupt or a reset signal.  
+    /// Although the system clock is stopped in this state, the oscillator circuit and LCD
+    /// controller continue to operate.  
+    fn halt(&mut self) {
+        self.state = State::Halt;
+        todo!();
+    }
+
+    /// Does nothing.  
+    fn nop(&mut self) {
+        todo!();
+    }
+    /// Stops both the system clock and the oscillator circuit.  
+    /// Stop mode stops the LCD controller.  
+    /// Stop mode is canceled by a reset signal.
+    fn stop(&mut self) {
+        self.state = State::Stop;
+        todo!();
+    }
+
+    /// Disables interrupts
+    fn di(&mut self) {
+        todo!();
+    }
+
+    /// Enables interrupts
+    fn ei(&mut self) {
+        todo!();
+    }
+
+    // Jump instructions
+
+    /// Loads the value of *source* to the `Program Counter` if *condition* is true.  
+    /// `Flag Register` is not updated.  
+    fn jp(&mut self, condition: Condition, source: Operand16) {
         let address = self.get_operand16(source);
         if self.registers.f.check_condition(condition) {
             self.registers.pc = address;
@@ -818,15 +857,70 @@ impl Cpu {
     }
 
     /// Adds the 8-bit immediate value to the `Program Counter` if *condition* is true.  
-    /// `FlagRegister` is updated as follows:  
-    /// `Z`: Not affected  
-    /// `H`: Not affected  
-    /// `N`: Not affected  
-    /// `C`: Not affected  
-    fn relative_jump(&mut self, condition: Condition) {
+    /// `Flag Register` is not updated.  
+    fn jr(&mut self, condition: Condition) {
         let steps = self.read_imm8() as u16;
         if self.registers.f.check_condition(condition) {
             self.registers.pc += steps;
+        }
+    }
+
+    /// If *condition* is true, pushes `Program Counter` of the next instruction on the stack and loads *source* onto `Program Counter`.  
+    /// `Flag Register` is not updated.  
+    fn call(&mut self, condition: Condition, source: Operand16) {
+        let opcode_len = if condition == Condition::Always { 3 } else { 5 };
+        let address = self.get_operand16(source);
+        if self.registers.f.check_condition(condition) {
+            self.registers.sp = self.registers.sp.wrapping_sub(2);
+            self.memory
+                .write16(self.registers.sp, self.registers.pc + opcode_len);
+            self.registers.pc = address;
+        }
+    }
+
+    /// If *condition* is true, pops from the memory stack the 16-bit value and loads that value
+    /// onto `Program Counter`.  
+    /// `Flag Register` is not updated.  
+    fn ret(&mut self, condition: Condition) {
+        let address = self.memory.read16(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(2);
+        if self.registers.f.check_condition(condition) {
+            self.registers.pc = address;
+        }
+    }
+
+    /// Pops the 16-bit value on the top of memory stack and loads it onto `Program Counter`.  
+    /// Enables the Master Interrupt flag.  
+    fn reti(&mut self) {
+        let address = self.memory.read16(self.registers.sp);
+        self.registers.sp = self.registers.sp.wrapping_add(2);
+        self.registers.pc = address;
+        //ime = 1;
+    }
+
+    /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
+    /// `Program Counter`.
+    fn rst(&mut self, address: Page0) {
+        self.registers.sp = self.registers.sp.wrapping_sub(2);
+        self.memory.write16(self.registers.sp, self.registers.pc);
+        self.registers.pc = address as u16;
+    }
+
+    /// Returns the 16-bit data stored at address represented by *addr*.  
+    /// `At` can be the 16-bit register `HL`, `BC`, or `DE`,  
+    /// a 16-bit immediate data (`Imm16`) or  
+    /// an 8-bit data (`Imm8` or 8-bit register `C`).  
+    /// When *addr* represents an 8-bit data, the returned value is obtained by
+    /// setting the most significant byte to `0xFF` and the least significant to the 8-bit data to
+    /// form an address in the range `0xFF00-0xFFFF`.
+    fn get_address(&mut self, addr: At) -> u16 {
+        match addr {
+            At::HL => self.registers.read16(Register16::HL),
+            At::BC => self.registers.read16(Register16::BC),
+            At::DE => self.registers.read16(Register16::DE),
+            At::Imm16 => self.read_imm16(),
+            At::Imm8 => 0xFF00 | self.read_imm8() as u16,
+            At::C => 0xFF00 | self.registers.c as u16,
         }
     }
 
@@ -848,50 +942,6 @@ impl Cpu {
                 let address = self.get_address(at);
                 self.memory.read8(address)
             }
-        }
-    }
-
-    /// Returns the 16-bit data stored at address represented by *addr*.  
-    /// `At` can be the 16-bit register `HL`, `BC`, or `DE`,  
-    /// a 16-bit immediate data (`Imm16`) or  
-    /// an 8-bit data (`Imm8` or 8-bit register `C`).  
-    /// When *addr* represents an 8-bit data, the returned value is obtained by
-    /// setting the most significant byte to `0xFF` and the least significant to the 8-bit data to
-    /// form an address in the range `0xFF00-0xFFFF`.
-    fn get_address(&mut self, addr: At) -> u16 {
-        match addr {
-            At::HL => self.registers.read16(Register16::HL),
-            At::BC => self.registers.read16(Register16::BC),
-            At::DE => self.registers.read16(Register16::DE),
-            At::Imm16 => self.read_imm16(),
-            At::Imm8 => 0xFF00 | self.read_imm8() as u16,
-            At::C => 0xFF00 | self.registers.c as u16,
-        }
-    }
-
-    fn load8(&mut self, destination: Operand8, source: Operand8) {
-        let value = self.get_operand8(source);
-        self.load_u8(destination, value);
-    }
-
-    /// Loads the 8-bit *data* into *destination*.  
-    /// If *destination* is either the 8-bit register `A`, `B`, `C`, `D`, `E`, `H`, `L`
-    /// or an address (represented by `Addr(at)`), data is loaded.
-    /// Otherwise, the function panics.
-    fn load_u8(&mut self, destination: Operand8, data: u8) {
-        match destination {
-            Operand8::A => self.registers.a = data,
-            Operand8::B => self.registers.b = data,
-            Operand8::C => self.registers.c = data,
-            Operand8::D => self.registers.d = data,
-            Operand8::E => self.registers.e = data,
-            Operand8::H => self.registers.h = data,
-            Operand8::L => self.registers.l = data,
-            Operand8::Addr(at) => {
-                let address = self.get_address(at);
-                self.memory.write8(address, data);
-            }
-            _ => panic!("Not a valid Operand8 for load_u8()"),
         }
     }
 
@@ -918,49 +968,7 @@ impl Cpu {
         }
     }
 
-    /// Loads the 16-bit *source* into *destination*.  
-    /// If *destination* is either the 16-bit register `BC`, `DE`, `HL`, `SP`
-    /// or an address (represented by `Addr(at)`), data is loaded.
-    /// Otherwise, the function panics.
-    fn load16(&mut self, destination: Operand16, source: Operand16) {
-        let data = self.get_operand16(source);
-        match destination {
-            Operand16::BC => self.registers.write16(Register16::BC, data),
-            Operand16::DE => self.registers.write16(Register16::DE, data),
-            Operand16::HL => self.registers.write16(Register16::HL, data),
-            Operand16::SP => self.registers.sp = data,
-            Operand16::Addr(At) => {
-                let address = self.get_address(At);
-                self.memory.write16(address, data);
-            }
-            _ => panic!("Not a valid Operand16 for load16()"),
-        }
-    }
-
-    /// Pushes to the stack memory, the 16-bit *source*.  
-    /// Before and after writing to memory, the stack pointer `sp` is decremented.  
-    /// If *source* is not one of the 16-bit registers `AF`, `BC`, `DE` or `HL`, the function
-    /// `Registers::get_register16()` panics.
-    fn push(&mut self, source: Operand16) {
-        let value = self.registers.read16(Registers::get_register16(source));
-
-        self.registers.sp = self.registers.sp.wrapping_sub(1);
-        self.memory.write16(self.registers.sp, value);
-        self.registers.sp = self.registers.sp.wrapping_sub(1);
-    }
-
-    /// Pops to the 16-bit register *target*, 16-bit of data pointed to by stack pointer `sp`.  
-    /// After reading the stack memory, `sp` is incremented by 2.  
-    /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
-    /// `Registers::get_register16()` panics.
-    fn pop(&mut self, target: Operand16) {
-        let value = self.memory.read16(self.registers.sp);
-        self.registers.sp = self.registers.sp.wrapping_add(2);
-
-        self.registers
-            .write16(Registers::get_register16(target), value);
-    }
-
+    /// TODO
     fn format_instruction(&self, imm: Imm, mnemonic: &str, mut address: u16) -> (String, u16) {
         let (value, size) = match imm {
             Imm::Eight => (format!("{:#04x}", self.memory.read8(address)), 1),
@@ -970,6 +978,7 @@ impl Cpu {
         return (mnemonic.replace("imm", &value).clone(), size);
     }
 
+    /// TODO
     pub fn disassemble(&self, lines: u16, mut address: u16) -> Vec<String> {
         let mut mnemonics = Vec::new();
 
@@ -993,29 +1002,6 @@ impl Cpu {
             mnemonics.push(mnemonic);
         }
         mnemonics
-    }
-
-    pub fn step(&mut self) {
-        match self.state {
-            State::Running => {
-                let (opcode, size) = match self.fetch(self.registers.pc) {
-                    Ok(t) => t,
-                    Err((msg, _)) => panic!("{}", msg),
-                };
-                self.registers.pc += size;
-                let instruction = Cpu::decode(opcode);
-                self.execute(instruction);
-            }
-            State::Halt => {
-                todo!();
-            }
-            State::Interrupt => {
-                todo!();
-            }
-            State::Stop => {
-                todo!();
-            }
-        }
     }
 }
 
@@ -1765,7 +1751,7 @@ mod tests {
     }
 
     #[test]
-    fn test_adc8() {
+    fn test_adc() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 10,
@@ -1783,21 +1769,21 @@ mod tests {
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.adc8(Operand8::B);
+        cpu.adc(Operand8::B);
         assert_eq!(cpu.registers.a, 12);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
 
-        cpu.adc8(Operand8::D);
+        cpu.adc(Operand8::D);
         assert_eq!(cpu.registers.a, 11);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
         assert!(cpu.registers.f.contains(Flags::C));
 
-        cpu.adc8(Operand8::Addr(At::HL));
+        cpu.adc(Operand8::Addr(At::HL));
         assert_eq!(cpu.registers.a, 251);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
@@ -2506,7 +2492,7 @@ mod tests {
     }
 
     #[test]
-    fn test_absolute_jump() {
+    fn test_jp() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 0x80,
@@ -2524,14 +2510,14 @@ mod tests {
             memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.absolute_jump(Condition::Always, Operand16::HL);
+        cpu.jp(Condition::Always, Operand16::HL);
         assert_eq!(cpu.registers.pc, 0x3b);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
 
-        cpu.absolute_jump(Condition::Always, Operand16::BC);
+        cpu.jp(Condition::Always, Operand16::BC);
         assert_eq!(cpu.registers.pc, 0x8503);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
@@ -2540,7 +2526,7 @@ mod tests {
     }
 
     #[test]
-    fn test_relative_jump() {
+    fn test_jr() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 0x80,
@@ -2558,14 +2544,14 @@ mod tests {
             memory: Memory::new(vec![2, 55, 147, 0xF0, 2, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.relative_jump(Condition::Always);
+        cpu.jr(Condition::Always);
         assert_eq!(cpu.registers.pc, 3);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
 
-        cpu.relative_jump(Condition::Always);
+        cpu.jr(Condition::Always);
         assert_eq!(cpu.registers.pc, 0xF4);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
