@@ -85,7 +85,6 @@ impl Flags {
     }
 
     /// Returns true when the flag status matches the condition, otherwise returns false.  
-    /// Special case: Condition::Always always returns true.  
     /// The relation between conditions and flags are as follows:
     ///
     /// | Condition | Flag  |  
@@ -95,7 +94,7 @@ impl Flags {
     /// |     C     | C = 1 |  
     /// |     Z     | Z = 1 |  
     ///
-    ///
+    /// See [Condition].  
     pub fn check_condition(&self, condition: Condition) -> bool {
         match condition {
             Condition::NC => !self.contains(Flags::C),
