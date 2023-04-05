@@ -50,6 +50,6 @@ pub fn load_rom(graphics: &mut Graphics) {
             return;
         }
     };
-    let mut memory = Memory::new(content);
+    let memory = Memory::new(content);
     graphics.cpu = Some(Cpu::new(memory));
 }

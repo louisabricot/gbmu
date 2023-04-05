@@ -161,10 +161,7 @@ impl Debugger {
             }
         }
         let regs = registers.iter().map(|s| s.as_ref()).collect();
-        match self.boxes[0].draw(
-            &mut self.canvas,
-            regs,
-        ) {
+        match self.boxes[0].draw(&mut self.canvas, regs) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
@@ -173,10 +170,7 @@ impl Debugger {
             Err(e) => println!("{}", e),
         }
         let instr = instructions.iter().map(|s| s.as_ref()).collect();
-        match self.boxes[2].draw(
-            &mut self.canvas,
-            instr,
-        ) {
+        match self.boxes[2].draw(&mut self.canvas, instr) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
