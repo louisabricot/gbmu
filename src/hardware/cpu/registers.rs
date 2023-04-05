@@ -11,6 +11,7 @@ use crate::hardware::cpu::registers::flags::Flags;
 pub mod flags;
 
 #[derive(Debug)]
+/// The CPU registers.  
 pub struct Registers {
     /// The 8-bit register `A` (Accumulator) stores data and the results of arithmetic and logical
     /// operations.  
