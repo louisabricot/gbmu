@@ -12,7 +12,7 @@ pub struct Instruction {
 
     /// An optional variable to inform whether the instruction has an operand stored in memory.  
     /// Set to None if the instruction does not require an immediate operand.
-    /// See [Imm]. 
+    /// See [Imm].
     pub operand: Option<Imm>,
 
     /// An [Operation] variant to represent the instruction's operation.
@@ -54,7 +54,6 @@ pub enum Page0 {
 #[derive(Copy, Clone, PartialEq)]
 /// Enumerates the sizes of immediate operands in bits  
 pub enum Imm {
-
     /// 8-bit immediate value
     Eight,
 
@@ -2360,8 +2359,8 @@ static INSTRUCTIONS: [Instruction; 324] = [
 ];
 
 #[derive(PartialEq, Clone, Copy)]
-/// Enumerates the possible conditions for conditional instructions. 
-/// Conditional instructions are executed if their condition matches the flag status. 
+/// Enumerates the possible conditions for conditional instructions.
+/// Conditional instructions are executed if their condition matches the flag status.
 ///
 /// | Condition | Flag  |
 /// |-----------|-------|
@@ -2374,10 +2373,10 @@ static INSTRUCTIONS: [Instruction; 324] = [
 ///
 /// ```
 /// todo!();
-/// 
+///
 /// ```
-/// 
-/// # Special case 
+///
+/// # Special case
 ///
 /// The variant *Always* is not part of the conditions described in the GameBoy documentation:
 /// it is always true and allows to re-use the code of conditional instructions for unconditional
@@ -2388,7 +2387,6 @@ static INSTRUCTIONS: [Instruction; 324] = [
 ///  
 /// ```
 pub enum Condition {
-    
     /// NZ is true when the *Zero* flag is not set  
     NZ,
 
@@ -2424,7 +2422,6 @@ pub enum Condition {
 /// ```
 ///
 pub enum At {
-
     /// The 16-bit register `HL`
     HL,
 
@@ -2447,11 +2444,10 @@ pub enum At {
 #[derive(PartialEq, Clone, Copy)]
 /// Enumerates the operands for 8-bit instructions.  
 pub enum Operand8 {
-
     /// The 8-bit register `A`.  
     A,
 
-    /// The 8-bit register `B`. 
+    /// The 8-bit register `B`.
     B,
 
     /// The 8-bit register `C`.  
@@ -2473,17 +2469,16 @@ pub enum Operand8 {
     Imm8,
 
     /// The 8-bit value at the address stored in `At`.
-    /// See [At]. 
+    /// See [At].
     Addr(At),
 }
 
 #[derive(PartialEq, Clone, Copy)]
 /// Enumerates the operands for 16-bit instructions.  
 pub enum Operand16 {
-
     /// The 16-bit register `AF`.  
     AF,
-    
+
     /// The 16-bit register `BC`.  
     BC,
 
@@ -2495,7 +2490,7 @@ pub enum Operand16 {
 
     /// The 16-bit `Stack Pointer`.  
     SP,
-    
+
     /// The 16-bit value at the address stored in `At`.  
     /// See [At].  
     Addr(At),
@@ -2510,7 +2505,6 @@ pub enum Operand16 {
 #[derive(Copy, Clone)]
 /// Enumerates the bit position in a byte.  
 pub enum Bit {
-
     /// The first bit
     Zero = 0b0000_0001,
 
@@ -2526,7 +2520,7 @@ pub enum Bit {
     /// The fifth bit
     Four = 0b0001_0000,
 
-    /// The sixth bit 
+    /// The sixth bit
     Five = 0b0010_0000,
 
     /// The seventh bit
@@ -2539,7 +2533,6 @@ pub enum Bit {
 #[derive(Copy, Clone)]
 /// Enumerates all the operations representend by instructions.  
 pub enum Operation {
-
     /// see [super::Cpu::load8()]
     Load8(Operand8, Operand8),
 
@@ -2572,7 +2565,7 @@ pub enum Operation {
 
     /// see [super::Cpu::and()]
     And(Operand8),
- 
+
     /// see [super::Cpu::xor()]
     Xor(Operand8),
 
