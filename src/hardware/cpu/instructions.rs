@@ -1,26 +1,27 @@
 /// Describes information about the instruction set
 #[derive(Copy, Clone)]
 pub struct Instruction {
-    /// To match each Instruction with a specific opcode
+    /// An [Opcode] variant representing the instruction.  
     pub opcode: Opcode,
 
-    /// A string that represents the instruction in a human readable way, eg LD A, (BC)
+    /// The instruction's mnemonic (e.g "LD A, B").  
+    /// In the case of instructions with immediate operands, the string stores "imm" as a
+    /// placeholder.  
+    /// See [super::Cpu::format_instruction()]  
     pub mnemonic: &'static str,
 
-    /// An optional variable to inform whether the instruction need operand stored in memory
-    /// Imm can be either Imm::Eight or Imm::Sixteen depending on whether the instruction needs
-    /// respectively an immediate 8-bit operand or an immediate 16-bit operand.
+    /// An optional variable to inform whether the instruction has an operand stored in memory.  
     /// Set to None if the instruction does not require an immediate operand.
+    /// See [Imm]. 
     pub operand: Option<Imm>,
 
-    /// An `Operation` enum to describe the type of operation is encoded in the opcode.
+    /// An [Operation] variant to represent the instruction's operation.
     pub operation: Operation,
 
-    /// A list of clock cycles associated to the opcode.
-    /// Most opcodes have exactly one opcode, but conditional instructions have two:
-    /// clock_cycle[0] stores the clock cycle when the condition is true
-    /// and clock_cycle[1] when the condition is false
-    /// Unconditional fill the second index with Clock::None
+    /// A list of clock cycles associated with the instruction.  
+    /// Unconditional instructions have exactly one clock and set the second [Clock] to `Clock::None`.  
+    /// Conditional instructions have exactly two clocks and store the clock for true conditions first, and then the clock for false
+    /// conditions.
     pub cycles: [Clock; 2],
 }
 
@@ -51,8 +52,13 @@ pub enum Page0 {
 
 /// Represents the two possible sizes of immediate operands: either 8-bit or 16-bit
 #[derive(Copy, Clone, PartialEq)]
+/// Enumerates the sizes of immediate operands in bits  
 pub enum Imm {
+
+    /// 8-bit immediate value
     Eight,
+
+    /// 16-bit immediate value
     Sixteen,
 }
 
@@ -1658,7 +1664,6 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Operation::Rst(Page0::Byte4),
         [Clock::Sixteen, Clock::None],
     ),
-    //TODO: pas certaine de cette instruction
     Instruction::new(
         Opcode::Add_sp_r8,
         "ADD SP, imm",
@@ -2355,175 +2360,340 @@ static INSTRUCTIONS: [Instruction; 324] = [
 ];
 
 #[derive(PartialEq, Clone, Copy)]
+/// Enumerates the possible conditions for conditional instructions. 
+/// Conditional instructions are executed if their condition matches the flag status. 
+///
+/// | Condition | Flag  |
+/// |-----------|-------|
+/// |    NZ     | Z = 0 |
+/// |    NC     | C = 0 |
+/// |    Z      | Z = 1 |
+/// |    C      | C = 1 |
+///
+/// # Example
+///
+/// ```
+/// todo!();
+/// 
+/// ```
+/// 
+/// # Special case 
+///
+/// The variant *Always* is not part of the conditions described in the GameBoy documentation:
+/// it is always true and allows to re-use the code of conditional instructions for unconditional
+/// instructions.
+///
+/// ```
+/// todo!();
+///  
+/// ```
 pub enum Condition {
+    
+    /// NZ is true when the *Zero* flag is not set  
     NZ,
+
+    /// NC is true when the *Carry* flag is not set  
     NC,
+
+    /// C is true when the *Carry* flag is set  
     C,
+
+    /// Z is true when the *Zero* flag is set  
     Z,
+
+    /// Always is always true  
     Always,
 }
 
 #[derive(PartialEq, Clone, Copy)]
+/// Enumerates the location where addresses can be stored
+///
+/// # Examples
+///
+/// ```
+/// let memory = vec![10, 24, 53, 34, 140, 39, 03, 93];
+///
+/// let mut cpu = Cpu::new(memory);
+///
+/// cpu.registers.write16(Register16::HL, 0x0003); //we write 0x0003 into HL
+///
+/// let value = cpu.get_operand8(Operand8::Addr(At::HL)); //gets the 8-bit value at address 0x0003
+/// in memory
+///
+/// assert_eq!(value, 53);
+/// ```
+///
 pub enum At {
+
+    /// The 16-bit register `HL`
     HL,
+
+    /// The 16-bit register `BC`
     BC,
+
+    /// The 16-bit register `DE`
     DE,
+
+    /// The 16-bit immediate value
     Imm16,
+
+    /// The 8-bit register `C`  
     C,
+
+    /// The 8-bit immediate value
     Imm8,
 }
 
 #[derive(PartialEq, Clone, Copy)]
+/// Enumerates the operands for 8-bit instructions.  
 pub enum Operand8 {
+
+    /// The 8-bit register `A`.  
     A,
+
+    /// The 8-bit register `B`. 
     B,
+
+    /// The 8-bit register `C`.  
     C,
+
+    /// The 8-bit register `D`.  
     D,
+
+    /// The 8-bit register `E`.  
     E,
+
+    /// The 8-bit register `H`.  
     H,
+
+    /// The 8-bit register `L`.  
     L,
+
+    /// The 8-bit immediate value.  
     Imm8,
+
+    /// The 8-bit value at the address stored in `At`.
+    /// See [At]. 
     Addr(At),
 }
 
 #[derive(PartialEq, Clone, Copy)]
+/// Enumerates the operands for 16-bit instructions.  
 pub enum Operand16 {
+
+    /// The 16-bit register `AF`.  
     AF,
+    
+    /// The 16-bit register `BC`.  
     BC,
+
+    /// The 16-bit register `DE`.  
     DE,
+
+    /// The 16-bit register `HL`.  
     HL,
+
+    /// The 16-bit `Stack Pointer`.  
     SP,
+    
+    /// The 16-bit value at the address stored in `At`.  
+    /// See [At].  
     Addr(At),
+
+    /// The 16-bit immediate value.  
     Imm16,
+
+    /// The 8-bit immediate value.  
     Imm8,
 }
 
 #[derive(Copy, Clone)]
+/// Enumerates the bit position in a byte.  
 pub enum Bit {
+
+    /// The first bit
     Zero = 0b0000_0001,
+
+    /// The second bit
     One = 0b0000_0010,
+
+    /// The third bit
     Two = 0b0000_0100,
+
+    /// The fourth bit  
     Three = 0b0000_1000,
+
+    /// The fifth bit
     Four = 0b0001_0000,
+
+    /// The sixth bit 
     Five = 0b0010_0000,
+
+    /// The seventh bit
     Six = 0b0100_0000,
+
+    /// The eighth bit
     Seven = 0b1000_0000,
 }
 
-/// Represents all the possible operations from the instruction set
 #[derive(Copy, Clone)]
+/// Enumerates all the operations representend by instructions.  
 pub enum Operation {
-    /// 8-bit load instructions
+
+    /// see [super::Cpu::load8()]
     Load8(Operand8, Operand8),
 
+    /// see [super::Cpu::load8dec()]
     Load8Dec(Operand8, Operand8),
 
+    /// see [super::Cpu::load8inc()]
     Load8Inc(Operand8, Operand8),
 
-    /// 16-bit load instructions
+    /// see [super::Cpu::load16()]
     Load16(Operand16, Operand16),
 
+    /// see [super::Cpu::push()]
     Push(Operand16),
 
+    /// see [super::Cpu::pop()]
     Pop(Operand16),
 
-    /// 8-bit arithmetic / logic instructions
+    /// see [super::Cpu::add8()]
     Add8(Operand8),
 
+    /// see [super::Cpu::adc()]
     Adc(Operand8),
 
+    /// see [super::Cpu::sub()]
     Sub(Operand8),
 
+    /// see [super::Cpu::sbc()]
     Sbc(Operand8),
 
+    /// see [super::Cpu::and()]
     And(Operand8),
-
+ 
+    /// see [super::Cpu::xor()]
     Xor(Operand8),
 
+    /// see [super::Cpu::or()]
     Or(Operand8),
 
+    /// see [super::Cpu::cp()]
     Cp(Operand8),
 
+    /// see [super::Cpu::inc8()]
     Inc8(Operand8),
 
+    /// see [super::Cpu::dec8()]
     Dec8(Operand8),
 
+    /// see [super::Cpu::daa()]
     Daa,
 
+    /// see [super::Cpu::cpl()]
     Cpl,
 
-    /// 16-bit Arithmetic/Logic instructions
+    /// see [super::Cpu::addHL_r16()]
     AddHL_r16(Operand16),
 
+    /// see [super::Cpu::inc16()]
     Inc16(Operand16),
 
+    /// see [super::Cpu::dec16()]
     Dec16(Operand16),
 
+    /// see [super::Cpu::loadHL()]
     LoadHL,
 
+    /// see [super::Cpu::addSP_dd()]
     AddSP_dd,
-    /// Rotate and Shift instructions
+
+    /// see [super::Cpu::rlca()]
     Rlca,
 
+    /// see [super::Cpu::rla()]
     Rla,
 
+    /// see [super::Cpu::rrca()]
     Rrca,
 
+    /// see [super::Cpu::rlc()]
     Rlc(Operand8),
 
+    /// see [super::Cpu::rl()]
     Rl(Operand8),
 
+    /// see [super::Cpu::rrc()]
     Rrc(Operand8),
 
+    /// see [super::Cpu::rr()]
     Rr(Operand8),
 
+    /// see [super::Cpu::sla()]
     Sla(Operand8),
 
+    /// see [super::Cpu::swap()]
     Swap(Operand8),
 
+    /// see [super::Cpu::sra()]
     Sra(Operand8),
 
+    /// see [super::Cpu::srl()]
     Srl(Operand8),
 
-    /// Single-bit Operations instructions
+    /// see [super::Cpu::bit()]
     Bit(Bit, Operand8),
 
+    /// see [super::Cpu::set()]
     Set(Bit, Operand8),
 
+    /// see [super::Cpu::res()]
     Res(Bit, Operand8),
 
-    /// CPU Control instructions
+    /// see [super::Cpu::ccf()]
     Ccf,
 
+    /// see [super::Cpu::scf()]
     Scf,
 
+    /// see [super::Cpu::nop()]
     Nop,
 
+    /// see [super::Cpu::halt()]
     Halt,
 
+    /// see [super::Cpu::stop()]
     Stop,
 
+    /// see [super::Cpu::di()]
     Di,
 
+    /// see [super::Cpu::ei()]
     Ei,
 
-    /// Jump instructions
+    /// see [super::Cpu::jp()]
     Jp(Condition, Operand16),
 
+    /// see [super::Cpu::jr()]
     Jr(Condition),
 
+    /// see [super::Cpu::call()]
     Call(Condition, Operand16),
 
+    /// see [super::Cpu::ret()]
     Ret(Condition),
 
+    /// see [super::Cpu::reti()]
     Reti,
 
+    /// see [super::Cpu::rst()]
     Rst(Page0),
 }
 
-/// Lists all the GameBoy opcode both regular and CB-prefixed
 #[allow(non_camel_case_types)]
 #[derive(PartialEq, Clone, Copy)]
+/// Enumerates all the GameBoy opcodes both regular and CB-prefixed
 pub enum Opcode {
     Nop,
     Ld_bc_d16,
