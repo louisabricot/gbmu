@@ -528,7 +528,10 @@ impl Cpu {
     /// Increments data represented by `target` by 1.  
     /// `Flag Register` is not updated.  
     fn inc16(&mut self, target: Operand16) {
-        let mut value = self.registers.read16(Registers::get_register16(target));
+        let mut value = match target {
+            Operand16::SP => self.registers.sp,
+            _ => self.registers.read16(Registers::get_register16(target)),
+        };
         value = value.wrapping_add(1);
         self.registers
             .write16(Registers::get_register16(target), value);
@@ -537,7 +540,10 @@ impl Cpu {
     /// Decrements data represented by `target` by 1.  
     /// `Flag Register` is not updated.  
     fn dec16(&mut self, target: Operand16) {
-        let mut value = self.registers.read16(Registers::get_register16(target));
+        let mut value = match target {
+            Operand16::SP => self.registers.sp,
+            _ => self.registers.read16(Registers::get_register16(target)),
+        };
         value = value.wrapping_sub(1);
         self.registers
             .write16(Registers::get_register16(target), value);

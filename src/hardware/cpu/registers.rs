@@ -47,7 +47,7 @@ pub struct Registers {
 }
 
 #[derive(Debug, Copy, Clone)]
-/// Enumerates the 4 possible pairing of 16-bit registers and the Stack Pointer
+/// Enumerates the 4 possible pairing of 16-bit registers
 pub enum Register16 {
     /// The 16-bit register `AF` pairs the 8-bit register `A` as it most significant byte and the
     /// 8-bit register `F` as it least significant byte.  
@@ -67,9 +67,6 @@ pub enum Register16 {
     /// The 16-bit register `HL` pairs the 8-bit register `H` as it most significant byte and the
     /// 8-bit register `L` as it least significant byte.  
     HL,
-
-    /// The 16-bit register `Stack Pointer`
-    SP,
 }
 
 impl Registers {
@@ -112,7 +109,6 @@ impl Registers {
             Register16::BC => (self.b as u16) << u8::BITS | self.c as u16,
             Register16::DE => (self.d as u16) << u8::BITS | self.e as u16,
             Register16::HL => (self.h as u16) << u8::BITS | self.l as u16,
-            Register16::SP => self.sp,
         }
     }
 
@@ -155,7 +151,6 @@ impl Registers {
                 self.h = (data >> u8::BITS) as u8;
                 self.l = data as u8;
             }
-            Register16::SP => self.sp = data,
         }
     }
 
@@ -168,7 +163,6 @@ impl Registers {
             Operand16::BC => Register16::BC,
             Operand16::DE => Register16::DE,
             Operand16::HL => Register16::HL,
-            Operand16::SP => Register16::SP,
             _ => panic!("Not a pair of 8-bit registers"),
         }
     }
