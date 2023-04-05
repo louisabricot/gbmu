@@ -1,5 +1,7 @@
 # Game Boy Emulator in Rust
 
+![ci](https://github.com/louisabricot/gbmu/actions/workflows/ci.yml/badge.svg)
+
 This project is a classic GameBoy emulator, developed for educational and fun purposes.
 
 The goal was to emulate both the Game Boy (DMG) and Game Boy Color (CGB) as well as to write a debugger.
