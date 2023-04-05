@@ -25,7 +25,7 @@ pub struct Instruction {
     pub cycles: [Clock; 2],
 }
 
-/// Enumerates the instruction speed in clock cycle
+/// Enumerates the time it takes to execute an intruction in clock cycle.
 #[derive(Copy, Clone)]
 pub enum Clock {
     None,
@@ -146,7 +146,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
     ),
     Instruction::new(
         Opcode::Ld_a16_sp,
-        "LD [imm], SP",
+        "LD (imm), SP",
         Some(Imm::Sixteen),
         Operation::Load16(Operand16::Addr(At::Imm16), Operand16::SP),
         [Clock::Twenty, Clock::None],

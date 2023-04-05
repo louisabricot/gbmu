@@ -4,7 +4,7 @@
 //! the `Program Counter` register and the `Stack Pointer` register.  
 //! Also implements the four 16-bit registers `AF`, `BC`, `DE` and `HL`.  
 //!
-//!
+
 use crate::hardware::cpu::instructions::Operand16;
 use crate::hardware::cpu::registers::flags::Flags;
 

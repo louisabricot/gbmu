@@ -6,6 +6,7 @@
 //! - [ ] Timing
 //! - [ ] State management
 //! - [ ] CPU control instructions (halt, stop etc)
+
 use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
@@ -87,7 +88,7 @@ impl Cpu {
             State::Running => {
                 let (opcode, size) = match self.fetch(self.registers.pc) {
                     Ok(t) => t,
-                    Err((msg, _)) => panic!("{}", msg),
+                    Err(msg) => panic!("{}", msg),
                 };
                 self.registers.pc += size;
                 let instruction = Cpu::decode(opcode);
@@ -129,11 +130,11 @@ impl Cpu {
             Operation::Daa => self.daa(),
             Operation::Cpl => self.cpl(),
 
-            Operation::AddHL_r16(source) => self.addHL_r16(source),
+            Operation::AddHL_r16(source) => self.add_hl_r16(source),
             Operation::Inc16(target) => self.inc16(target),
             Operation::Dec16(target) => self.dec16(target),
-            Operation::AddSP_dd => self.addSP_dd(),
-            Operation::LoadHL => self.loadHL(),
+            Operation::AddSP_dd => self.add_sp_dd(),
+            Operation::LoadHL => self.load_hl(),
 
             Operation::Rlca => self.rlca(),
             Operation::Rla => self.rla(),
@@ -228,8 +229,8 @@ impl Cpu {
             Operand16::DE => self.registers.write16(Register16::DE, data),
             Operand16::HL => self.registers.write16(Register16::HL, data),
             Operand16::SP => self.registers.sp = data,
-            Operand16::Addr(At) => {
-                let address = self.get_address(At);
+            Operand16::Addr(at) => {
+                let address = self.get_address(at);
                 self.memory.write16(address, data);
             }
             _ => panic!("Not a valid Operand16 for load16()"),
@@ -417,7 +418,7 @@ impl Cpu {
     /// `H`: Set if there is a carry from bit3, otherwise reset  
     /// `N`: Reset  
     /// `C`: Set if there is a carry from bit7, otherwise reset  
-    fn add_u8_to_A(&mut self, data: u8) {
+    fn add_u8_to_a(&mut self, data: u8) {
         let (result, overflow) = self.registers.a.overflowing_add(data);
         let half_carry = (self.registers.a & 0x0F).checked_add(data | 0xF0).is_none();
 
@@ -430,19 +431,19 @@ impl Cpu {
 
     /// Adds *source* to the 8-bit register `A`, and stores the result
     /// back into `A`.  
-    /// Calls `add_u8_to_A` with the value returned by `get_operand8`.  
+    /// Calls `add_u8_to_a` with the value returned by `get_operand8`.  
     fn add8(&mut self, source: Operand8) {
         let value = self.get_operand8(source);
-        self.add_u8_to_A(value);
+        self.add_u8_to_a(value);
     }
 
     /// Adds *source* and the `carry flag` to the 8-bit register `A`, and stores the result
     /// back into `A`.  
-    /// Calls `add_u8_to_A` with the value returned by `get_operand8` and the `carry` flag.  
+    /// Calls `add_u8_to_a` with the value returned by `get_operand8` and the `carry` flag.  
     fn adc(&mut self, source: Operand8) {
         let carry = self.registers.f.contains(Flags::C) as u8;
         let value = self.get_operand8(source);
-        self.add_u8_to_A(carry + value);
+        self.add_u8_to_a(carry + value);
     }
 
     /// Substracts the 8-bit *data* from the 8-bit register `A` and returns the result.  
@@ -488,7 +489,7 @@ impl Cpu {
     /// `N`: Reset  
     /// `H`: Set if there is a carry from bit 11, otherwise reset  
     /// `C`: Set if there is a carry from bit 15, otherwise reset  
-    fn loadHL(&mut self) {
+    fn load_hl(&mut self) {
         let value = self.read_imm8() as u16;
 
         let (result, carry) = self.registers.sp.overflowing_add(value);
@@ -509,7 +510,7 @@ impl Cpu {
     /// `N`: Reset  
     /// `H`: Set if there is a carry on bit7, otherwise reset  
     /// `C`: Set if there is a carry on bit15, otherwise reset  
-    fn addSP_dd(&mut self) {
+    fn add_sp_dd(&mut self) {
         let value = self.read_imm8() as u16;
 
         let (result, carry) = self.registers.pc.overflowing_add(value);
@@ -548,7 +549,7 @@ impl Cpu {
     /// `H`: Set if there is a carry from bit11, otherwise reset  
     /// `N`: Reset  
     /// `C`: Set if there is a carry from bit5, otherwise reset  
-    fn addHL_r16(&mut self, source: Operand16) {
+    fn add_hl_r16(&mut self, source: Operand16) {
         let value = self.registers.read16(Registers::get_register16(source));
         let target = self.registers.read16(Register16::HL);
 
@@ -988,13 +989,13 @@ impl Cpu {
     }
 
     /// TODO
-    fn format_instruction(&self, imm: Imm, mnemonic: &str, mut address: u16) -> (String, u16) {
+    fn format_instruction(&self, imm: Imm, mnemonic: &str, address: u16) -> (String, u16) {
         let (value, size) = match imm {
             Imm::Eight => (format!("{:#04x}", self.memory.read8(address)), 1),
             Imm::Sixteen => (format!("{:#08x}", self.memory.read16(address)), 2),
         };
 
-        return (mnemonic.replace("imm", &value).clone(), size);
+        (mnemonic.replace("imm", &value), size)
     }
 
     /// TODO
@@ -1013,8 +1014,8 @@ impl Cpu {
                     address += size;
                     mnemonic
                 }
-                Err((_, size)) => {
-                    address += size;
+                Err(..) => {
+                    address += 1;
                     "BAADD".to_string()
                 }
             };
@@ -1687,7 +1688,7 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::C));
     }
     #[test]
-    fn test_add_u8_to_A() {
+    fn test_add_u8_to_a() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 10,
@@ -1705,14 +1706,14 @@ mod tests {
             memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.add_u8_to_A(2);
+        cpu.add_u8_to_a(2);
         assert_eq!(cpu.registers.a, 12);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
         assert!(!cpu.registers.f.contains(Flags::C));
 
-        cpu.add_u8_to_A(0xff);
+        cpu.add_u8_to_a(0xff);
         assert_eq!(cpu.registers.a, 11);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
@@ -1720,7 +1721,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.registers.a = 0;
-        cpu.add_u8_to_A(0);
+        cpu.add_u8_to_a(0);
         assert_eq!(cpu.registers.a, 0);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
@@ -1929,7 +1930,7 @@ mod tests {
     }
 
     #[test]
-    fn test_loadHL() {
+    fn test_load_hl() {
         let mut cpu = Cpu {
             registers: Registers {
                 a: 1,
@@ -1947,7 +1948,7 @@ mod tests {
             memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
-        cpu.loadHL();
+        cpu.load_hl();
         assert_eq!(cpu.registers.read16(Register16::HL), 0xFFFA);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));

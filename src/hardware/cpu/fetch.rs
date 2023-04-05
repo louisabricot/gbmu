@@ -4,11 +4,11 @@ use crate::Cpu;
 impl Cpu {
     /// Returns the Opcode enum matching the opcode read from memory
     /// If the opcode is 0xCB, the next byte is matched against CB-prefixed opcodes
-    pub fn fetch(&self, address: u16) -> Result<(Opcode, u16), (String, u16)> {
+    pub fn fetch(&self, address: u16) -> Result<(Opcode, u16), String> {
         let byte = self.memory.read8(address);
 
         if byte == 0xCB {
-            return self.fetch_cb(address + 1);
+            return Ok((self.fetch_cb(address + 1), 2));
         }
 
         let opcode = match byte {
@@ -272,18 +272,18 @@ impl Cpu {
             0xFE => Opcode::Cp_d8,
             0xFF => Opcode::Rst_38h,
             _ => {
-                return Err((
-                    format!("value not part of the instruction set: {:#x}", byte),
-                    1,
+                return Err(format!(
+                    "value not part of the instruction set: {:#x}",
+                    byte
                 ))
             }
         };
         Ok((opcode, 1))
     }
 
-    fn fetch_cb(&self, address: u16) -> Result<(Opcode, u16), (String, u16)> {
+    fn fetch_cb(&self, address: u16) -> Opcode {
         let byte = self.memory.read8(address);
-        let opcode = match byte {
+        match byte {
             0x00 => Opcode::Rlc_b,
             0x01 => Opcode::Rlc_c,
             0x02 => Opcode::Rlc_d,
@@ -553,13 +553,6 @@ impl Cpu {
             0xFD => Opcode::Set_7_l,
             0xFE => Opcode::Set_7_hl,
             0xFF => Opcode::Set_7_a,
-            _ => {
-                return Err((
-                    format!("value not part of the instruction set: 0xCB {:x}", byte),
-                    2,
-                ))
-            }
-        };
-        Ok((opcode, 2))
+        }
     }
 }
