@@ -1,3 +1,11 @@
+//! CPU emulation.
+//!
+//! Implementation of the GameBoy's CPU, its registers and instructions.   
+//!
+//! Missing:
+//! - [ ] Timing
+//! - [ ] State management
+//! - [ ] CPU control instructions (halt, stop etc)
 use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
@@ -12,22 +20,33 @@ pub mod instructions;
 pub mod registers;
 
 pub struct Cpu {
+    /// General-purpose registers, Program Counter and Stack Pointer
     registers: Registers,
+
+    /// CPU state
     state: State,
+
+    /// TODO
     memory: Memory,
 }
 
+/// CPU states
 pub enum State {
+    /// TODO
     Running,
+
+    /// TODO
     Halt,
+
+    /// TODO
     Stop,
+
+    /// TODO
     Interrupt,
 }
 
 impl Cpu {
-    /// Initializes registers
-    /// TODO: Set Stack Pointer and Program Counter
-    /// TODO: Maybe add a INIT state?
+    /// Initializes CPU with default values
     pub fn new(memory: Memory) -> Self {
         Self {
             registers: Registers::new(),
