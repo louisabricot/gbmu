@@ -3,6 +3,9 @@ use native_dialog::{FileDialog, MessageDialog, MessageType};
 
 use std::fs;
 
+use super::super::hardware::cpu::Cpu;
+use super::super::hardware::memory::Memory;
+
 use super::Graphics;
 
 /// Toggle overlay on the LCD Window
@@ -15,7 +18,7 @@ pub fn toggle_overlay(graphics: &mut Graphics) {
 }
 
 /// Open a FileDialog then load a Rom into memory
-pub fn load_rom(_graphics: &mut Graphics) {
+pub fn load_rom(graphics: &mut Graphics) {
     let path = match FileDialog::new()
         .add_filter("rom", &["gb"])
         .show_open_single_file()
@@ -35,7 +38,7 @@ pub fn load_rom(_graphics: &mut Graphics) {
         Some(path) => path,
         None => return, // Canceled dialog
     };
-    let _content = match fs::read(path) {
+    let content = match fs::read(path) {
         Ok(content) => content,
         Err(error) => {
             MessageDialog::new()
@@ -47,4 +50,6 @@ pub fn load_rom(_graphics: &mut Graphics) {
             return;
         }
     };
+    let mut memory = Memory::new(content);
+    graphics.cpu = Some(Cpu::new(memory));
 }

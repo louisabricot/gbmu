@@ -15,6 +15,9 @@ use sdl2::Sdl;
 
 use std::time::Duration;
 
+use super::hardware::memory::Memory;
+use super::hardware::cpu::Cpu;
+
 mod controller;
 mod debugger;
 mod gui;
@@ -30,6 +33,7 @@ pub struct Graphics {
     pub lcd: Lcd,
     /// Debugger Window providing options for the GameBoy emulator
     pub debugger: Debugger,
+    pub cpu: Option<Cpu>
 }
 
 impl Graphics {
@@ -44,6 +48,7 @@ impl Graphics {
             sdl_context,
             lcd,
             debugger,
+            cpu: None,
         }
     }
 
@@ -88,7 +93,15 @@ impl Graphics {
                 }
             }
             self.lcd.print_frame();
-            self.debugger.print_frame();
+            self.debugger.print_frame(vec![
+                    "abc".to_string();
+                    self.debugger.registers().get_nb_lines() as usize
+                ],
+                match &self.cpu {
+                    Some(cpu) => cpu.disassemble(self.debugger.instructions().get_nb_lines() as u16, 0),
+                    None => vec![],
+                },
+            );
             std::thread::sleep(Duration::from_millis(10));
         }
     }

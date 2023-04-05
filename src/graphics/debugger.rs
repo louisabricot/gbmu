@@ -151,7 +151,7 @@ impl Debugger {
     }
 
     /// Print the actual frame into the Debugger window
-    pub fn print_frame(&mut self) {
+    pub fn print_frame(&mut self, registers: Vec<String>, instructions: Vec<String>) {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
         for button in &mut self.buttons {
@@ -160,24 +160,10 @@ impl Debugger {
                 Err(e) => println!("{}", e),
             }
         }
+        let regs = registers.iter().map(|s| s.as_ref()).collect();
         match self.boxes[0].draw(
             &mut self.canvas,
-            vec![
-                "AB: 0xffff",
-                "     A: 0xff",
-                "     B: 0xff",
-                "CD: 0xffff",
-                "     C: 0xff",
-                "     D: 0xff",
-                "EF: 0xffff",
-                "     E: 0xff",
-                "     F: 0xff",
-                "HL: 0xffff",
-                "     H: 0xff",
-                "     L: 0xff",
-                "SP: 0xffff",
-                "PC: 0xffff",
-            ],
+            regs,
         ) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
@@ -186,14 +172,23 @@ impl Debugger {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
+        let instr = instructions.iter().map(|s| s.as_ref()).collect();
         match self.boxes[2].draw(
             &mut self.canvas,
-            vec!["0xffff: LD AB, 0xdead"; self.boxes[2].get_nb_lines() as usize],
+            instr,
         ) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
         self.canvas.present();
+    }
+
+    pub fn registers(&self) -> &TextBox {
+        &self.boxes[0]
+    }
+
+    pub fn instructions(&self) -> &TextBox {
+        &self.boxes[2]
     }
 
     /// Get the window id from canvas
