@@ -4,12 +4,6 @@ This project is a classic GameBoy emulator, developed for educational and fun pu
 
 The goal was to emulate both the Game Boy (DMG) and Game Boy Color (CGB) as well as to write a debugger.
 
-<aside>
-
-⚠️ The CPU emulation is under development on branch **cpu-emulation** …
-
-</aside>
-
 
 ## Table of Content
 
