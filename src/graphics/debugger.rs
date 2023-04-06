@@ -24,6 +24,9 @@ const SCREEN_WIDTH: u32 = 300;
 /// Debugger height
 const SCREEN_HEIGHT: u32 = SPACE_SZ * 7 + BTN_HEIGHT * 4 + REG_HEIGHT + PRG_HEIGHT;
 
+const COLOR_BACKGROUND: Color = Color::RGB(13, 16, 23);
+const COLOR_BACKGROUND_BUTTON: Color = Color::RGB(33, 38, 45);
+
 /// Represent the Debugger window
 pub struct Debugger {
     canvas: Canvas<Window>,
@@ -41,8 +44,6 @@ impl Debugger {
             .build()
             .unwrap();
         let mut canvas = window.into_canvas().build().unwrap();
-        canvas.set_draw_color(Color::RED);
-
         let mut boxes = Vec::new();
         let mut buttons = Vec::new();
 
@@ -152,10 +153,14 @@ impl Debugger {
 
     /// Print the actual frame into the Debugger window
     pub fn print_frame(&mut self, registers: Vec<String>, instructions: Vec<String>) {
-        self.canvas.set_draw_color(Color::BLACK);
+        self.canvas.set_draw_color(COLOR_BACKGROUND);
         self.canvas.clear();
         for button in &mut self.buttons {
-            match button.draw(&mut self.canvas, Some(Color::RED), Color::WHITE) {
+            match button.draw(
+                &mut self.canvas,
+                Some(COLOR_BACKGROUND_BUTTON),
+                Color::WHITE,
+            ) {
                 Ok(()) => (),
                 Err(e) => println!("{}", e),
             }

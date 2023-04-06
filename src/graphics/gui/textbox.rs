@@ -21,6 +21,8 @@ const PADDING_TEXTBOX: u32 = 5;
 const INTERLINE_TEXTBOX: u32 = 2;
 const LINE_HEIGHT_TEXTBOX: u32 = 10;
 
+const COLOR_BACKGROUND: Color = Color::RGB(22, 27, 35);
+
 /// Represent a GUI TextBox
 pub struct TextBox {
     /// `sdl2::rect::Rect` to draw textbox
@@ -44,7 +46,7 @@ impl TextBox {
     }
 
     pub fn draw(&self, canvas: &mut Canvas<Window>, lines: Vec<&str>) -> Result<(), String> {
-        canvas.set_draw_color(Color::RED);
+        canvas.set_draw_color(COLOR_BACKGROUND);
         canvas.fill_rect(self.rect)?;
 
         let ttf_context: Sdl2TtfContext = sdl2::ttf::init().unwrap();
