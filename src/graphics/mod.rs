@@ -16,7 +16,6 @@ use sdl2::Sdl;
 use std::time::Duration;
 
 use super::hardware::cpu::Cpu;
-use super::hardware::memory::Memory;
 
 mod controller;
 mod debugger;

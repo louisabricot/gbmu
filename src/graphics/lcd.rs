@@ -17,6 +17,40 @@ const SCREEN_HEIGHT: u32 = 144;
 /// Ratio used to render the LCD window
 const PIXEL_SIZE: u32 = 4;
 
+// Buttons width and height
+const BUTTON_AB_WIDTH: f32 = 130.0;
+const BUTTON_AB_HEIGHT: f32 = 130.0;
+
+const BUTTON_DIR_WIDTH: f32 = 80.0;
+const BUTTON_DIR_HEIGHT: f32 = 80.0;
+
+const BUTTON_OPT_WIDTH: f32 = 135.0;
+const BUTTON_OPT_HEIGHT: f32 = 85.0;
+
+// Buttons position
+const BUTTON_A_POS: (f32, f32) = (690.0, 25.0);
+const BUTTON_B_POS: (f32, f32) = (540.0, 95.0);
+
+const BUTTON_UP_POS: (f32, f32) = (105.0, 22.0);
+const BUTTON_LEFT_POS: (f32, f32) = (26.0, 102.0);
+const BUTTON_DOWN_POS: (f32, f32) = (105.0, 182.0);
+const BUTTON_RIGHT_POS: (f32, f32) = (185.0, 102.0);
+
+const BUTTON_START_POS: (f32, f32) = (220.0, 320.0);
+const BUTTON_SELECT_POS: (f32, f32) = (380.0, 320.0);
+
+// Buttons label
+const BUTTON_A_LABEL: &str = "O";
+const BUTTON_B_LABEL: &str = "K";
+
+const BUTTON_UP_LABEL: &str = "W";
+const BUTTON_LEFT_LABEL: &str = "A";
+const BUTTON_DOWN_LABEL: &str = "S";
+const BUTTON_RIGHT_LABEL: &str = "D";
+
+const BUTTON_START_LABEL: &str = "V";
+const BUTTON_SELECT_LABEL: &str = "B";
+
 /// Represent the Gameboy LCD window
 pub struct Lcd {
     canvas: Canvas<Window>,
@@ -45,104 +79,104 @@ impl Lcd {
             Button::new(
                 // A
                 (
-                    joystick.rect().x + (690.0 * ratio_width) as i32,
-                    joystick.rect().y + (25.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_A_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_A_POS.1 * ratio_height) as i32,
                 ),
-                (130.0 * ratio_width) as u32,
-                (130.0 * ratio_height) as u32,
-                40,
-                "O".to_string(),
+                (BUTTON_AB_WIDTH * ratio_width) as u32,
+                (BUTTON_AB_HEIGHT * ratio_height) as u32,
+                10 * PIXEL_SIZE,
+                BUTTON_A_LABEL.to_string(),
                 true,
                 None,
             ),
             Button::new(
                 // B
                 (
-                    joystick.rect().x + (540.0 * ratio_width) as i32,
-                    joystick.rect().y + (95.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_B_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_B_POS.1 * ratio_height) as i32,
                 ),
-                (130.0 * ratio_width) as u32,
-                (130.0 * ratio_height) as u32,
-                40,
-                "K".to_string(),
+                (BUTTON_AB_WIDTH * ratio_width) as u32,
+                (BUTTON_AB_HEIGHT * ratio_height) as u32,
+                10 * PIXEL_SIZE,
+                BUTTON_B_LABEL.to_string(),
                 true,
                 None,
             ),
             Button::new(
                 // UP
                 (
-                    joystick.rect().x + (105.0 * ratio_width) as i32,
-                    joystick.rect().y + (22.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_UP_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_UP_POS.1 * ratio_height) as i32,
                 ),
-                (80.0 * ratio_width) as u32,
-                (80.0 * ratio_height) as u32,
-                40,
-                "W".to_string(),
+                (BUTTON_DIR_WIDTH * ratio_width) as u32,
+                (BUTTON_DIR_HEIGHT * ratio_height) as u32,
+                10 * PIXEL_SIZE,
+                BUTTON_UP_LABEL.to_string(),
                 true,
                 None,
             ),
             Button::new(
                 // LEFT
                 (
-                    joystick.rect().x + (26.0 * ratio_width) as i32,
-                    joystick.rect().y + (102.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_LEFT_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_LEFT_POS.1 * ratio_height) as i32,
                 ),
-                (80.0 * ratio_width) as u32,
-                (80.0 * ratio_height) as u32,
-                40,
-                "A".to_string(),
+                (BUTTON_DIR_WIDTH * ratio_width) as u32,
+                (BUTTON_DIR_HEIGHT * ratio_height) as u32,
+                10 * PIXEL_SIZE,
+                BUTTON_LEFT_LABEL.to_string(),
                 true,
                 None,
             ),
             Button::new(
                 // DOWN
                 (
-                    joystick.rect().x + (105.0 * ratio_width) as i32,
-                    joystick.rect().y + (182.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_DOWN_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_DOWN_POS.1 * ratio_height) as i32,
                 ),
-                (80.0 * ratio_width) as u32,
-                (80.0 * ratio_height) as u32,
-                40,
-                "S".to_string(),
+                (BUTTON_DIR_WIDTH * ratio_width) as u32,
+                (BUTTON_DIR_HEIGHT * ratio_height) as u32,
+                10 * PIXEL_SIZE,
+                BUTTON_DOWN_LABEL.to_string(),
                 true,
                 None,
             ),
             Button::new(
                 // RIGHT
                 (
-                    joystick.rect().x + (185.0 * ratio_width) as i32,
-                    joystick.rect().y + (102.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_RIGHT_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_RIGHT_POS.1 * ratio_height) as i32,
                 ),
-                (80.0 * ratio_width) as u32,
-                (80.0 * ratio_height) as u32,
-                40,
-                "D".to_string(),
+                (BUTTON_DIR_WIDTH * ratio_width) as u32,
+                (BUTTON_DIR_HEIGHT * ratio_height) as u32,
+                10 * PIXEL_SIZE,
+                BUTTON_RIGHT_LABEL.to_string(),
                 true,
                 None,
             ),
             Button::new(
                 // START
                 (
-                    joystick.rect().x + (220.0 * ratio_width) as i32,
-                    joystick.rect().y + (320.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_START_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_START_POS.1 * ratio_height) as i32,
                 ),
-                (135.0 * ratio_width) as u32,
-                (85.0 * ratio_height) as u32,
-                30,
-                "V".to_string(),
+                (BUTTON_OPT_WIDTH * ratio_width) as u32,
+                (BUTTON_OPT_HEIGHT * ratio_height) as u32,
+                7 * PIXEL_SIZE,
+                BUTTON_START_LABEL.to_string(),
                 false,
                 None,
             ),
             Button::new(
                 // SELECT
                 (
-                    joystick.rect().x + (380.0 * ratio_width) as i32,
-                    joystick.rect().y + (320.0 * ratio_height) as i32,
+                    joystick.rect().x + (BUTTON_SELECT_POS.0 * ratio_width) as i32,
+                    joystick.rect().y + (BUTTON_SELECT_POS.1 * ratio_height) as i32,
                 ),
-                (135.0 * ratio_width) as u32,
-                (85.0 * ratio_height) as u32,
-                30,
-                "B".to_string(),
+                (BUTTON_OPT_WIDTH * ratio_width) as u32,
+                (BUTTON_OPT_HEIGHT * ratio_height) as u32,
+                7 * PIXEL_SIZE,
+                BUTTON_SELECT_LABEL.to_string(),
                 false,
                 None,
             ),

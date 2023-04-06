@@ -27,30 +27,30 @@ pub fn get_texture_rect(
     cons_height: u32,
     centered: bool,
 ) -> Rect {
-    let wr = rect_width as f32 / cons_width as f32;
-    let hr = rect_height as f32 / cons_height as f32;
+    let width_ratio = rect_width as f32 / cons_width as f32;
+    let height_ratio = rect_height as f32 / cons_height as f32;
 
-    let (w, h) = if wr > 1f32 || hr > 1f32 {
-        if wr > hr {
+    let (width, height) = if width_ratio > 1f32 || height_ratio > 1f32 {
+        if width_ratio > height_ratio {
             // Scaling down
-            let h = (rect_height as f32 / wr) as i32;
-            (cons_width as i32, h)
+            let height = (rect_height as f32 / width_ratio) as i32;
+            (cons_width as i32, height)
         } else {
             // Scaling up
-            let w = (rect_width as f32 / hr) as i32;
-            (w, cons_height as i32)
+            let width = (rect_width as f32 / height_ratio) as i32;
+            (width, cons_height as i32)
         }
     } else {
         (rect_width as i32, rect_height as i32)
     };
 
-    let (cx, cy) = if centered {
+    let (x, y) = if centered {
         (
-            x + (cons_width as i32 - w) / 2,
-            y + (cons_height as i32 - h) / 2,
+            x + (cons_width as i32 - width) / 2,
+            y + (cons_height as i32 - height) / 2,
         )
     } else {
         (x, y)
     };
-    Rect::new(cx, cy, w as u32, h as u32)
+    Rect::new(x, y, width as u32, height as u32)
 }
