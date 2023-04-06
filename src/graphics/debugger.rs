@@ -81,21 +81,21 @@ impl Debugger {
             Some(toggle_overlay),
         ));
 
-        // Registers 1
+        // Registers
         let x = SPACE_SZ;
         let y = SPACE_SZ * 3 + BTN_HEIGHT * 2;
         let width = (SCREEN_WIDTH - SPACE_SZ * 2) / 2;
         let height = REG_HEIGHT;
         boxes.push(TextBox::new(x as i32, y as i32, width, height));
 
-        // Registers 2
+        // Flags
         let width = (SCREEN_WIDTH - SPACE_SZ * 2) / 2;
         let height = REG_HEIGHT;
         let x = SPACE_SZ + width;
         let y = SPACE_SZ * 3 + BTN_HEIGHT * 2;
         boxes.push(TextBox::new(x as i32, y as i32, width, height));
 
-        // Program execution
+        // Instructions
         let x = SPACE_SZ;
         let y = SPACE_SZ * 4 + BTN_HEIGHT * 2 + REG_HEIGHT;
         let width = SCREEN_WIDTH - SPACE_SZ * 2;
@@ -152,7 +152,12 @@ impl Debugger {
     }
 
     /// Print the actual frame into the Debugger window
-    pub fn print_frame(&mut self, registers: Vec<String>, instructions: Vec<String>) {
+    pub fn print_frame(
+        &mut self,
+        registers: Vec<String>,
+        flags: Vec<String>,
+        instructions: Vec<String>,
+    ) {
         self.canvas.set_draw_color(COLOR_BACKGROUND);
         self.canvas.clear();
         for button in &mut self.buttons {
@@ -170,7 +175,8 @@ impl Debugger {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
-        match self.boxes[1].draw(&mut self.canvas, vec!["F: 0b1111"]) {
+        let fl = flags.iter().map(|s| s.as_ref()).collect();
+        match self.boxes[1].draw(&mut self.canvas, fl) {
             Ok(()) => (),
             Err(e) => println!("{}", e),
         }
@@ -184,6 +190,10 @@ impl Debugger {
 
     pub fn registers(&self) -> &TextBox {
         &self.boxes[0]
+    }
+
+    pub fn flags(&self) -> &TextBox {
+        &self.boxes[1]
     }
 
     pub fn instructions(&self) -> &TextBox {

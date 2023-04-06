@@ -93,7 +93,8 @@ impl Graphics {
             }
             self.lcd.print_frame();
             self.debugger.print_frame(
-                vec!["abc".to_string(); self.debugger.registers().get_nb_lines() as usize],
+                vec!["regs".to_string(); self.debugger.registers().get_nb_lines() as usize],
+                vec!["flags".to_string(); self.debugger.flags().get_nb_lines() as usize],
                 match &self.cpu {
                     Some(cpu) => {
                         cpu.disassemble(self.debugger.instructions().get_nb_lines() as u16, 0)
