@@ -1,5 +1,5 @@
 use super::instructions::Opcode;
-use crate::Cpu;
+use super::Cpu;
 
 impl Cpu {
     /// Returns the Opcode enum matching the opcode read from memory
