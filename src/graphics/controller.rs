@@ -3,7 +3,7 @@ use native_dialog::{FileDialog, MessageDialog, MessageType};
 
 use std::fs;
 
-use super::super::hardware::cpu::Cpu;
+use super::super::hardware::gameboy::GameBoy;
 use super::super::hardware::memory::Memory;
 
 use super::Graphics;
@@ -18,8 +18,8 @@ pub fn toggle_overlay(graphics: &mut Graphics) {
 }
 
 pub fn step(graphics: &mut Graphics) {
-    if let Some(cpu) = &mut graphics.cpu {
-        cpu.step();
+    if let Some(gameboy) = &mut graphics.gameboy {
+        gameboy.step();
     }
 }
 
@@ -56,6 +56,9 @@ pub fn load_rom(graphics: &mut Graphics) {
             return;
         }
     };
-    let memory = Memory::new(content);
-    graphics.cpu = Some(Cpu::new(memory));
+    let cartridge = Memory::new(content);
+    if GameBoy::check_header_checksum(&cartridge) {
+        graphics.gameboy = Some(GameBoy::new(cartridge));
+        println!("Starting game boy");
+    }
 }

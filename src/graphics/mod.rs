@@ -15,8 +15,7 @@ use sdl2::Sdl;
 
 use std::time::Duration;
 
-use super::hardware::cpu::registers::Register8;
-use super::hardware::cpu::Cpu;
+use super::hardware::gameboy::GameBoy;
 
 mod controller;
 mod debugger;
@@ -33,7 +32,7 @@ pub struct Graphics {
     pub lcd: Lcd,
     /// Debugger Window providing options for the GameBoy emulator
     pub debugger: Debugger,
-    pub cpu: Option<Cpu>,
+    pub gameboy: Option<GameBoy>,
 }
 
 impl Graphics {
@@ -48,7 +47,7 @@ impl Graphics {
             sdl_context,
             lcd,
             debugger,
-            cpu: None,
+            gameboy: None,
         }
     }
 
@@ -93,13 +92,13 @@ impl Graphics {
                 }
             }
             self.lcd.print_frame();
-            match &self.cpu {
-                Some(cpu) => self.debugger.print_frame(
+            match &self.gameboy {
+                Some(gameboy) => self.debugger.print_frame(
                     self.print_registers(),
                     self.get_flags(),
-                    cpu.disassemble(
+                    gameboy.disassemble(
                         self.debugger.instructions().get_nb_lines() as u16,
-                        cpu.registers.pc,
+                        gameboy.get_program_counter(),
                     ),
                 ),
                 None => self.debugger.print_frame(vec![], vec![], vec![]),
@@ -110,24 +109,16 @@ impl Graphics {
 
     fn print_registers(&self) -> Vec<String> {
         let mut registers = Vec::new();
-
-        if let Some(cpu) = &self.cpu {
-            registers.push("A: ".to_owned() + &cpu.print_register(Register8::A));
-            registers.push("B: ".to_owned() + &cpu.print_register(Register8::B));
-            registers.push("C: ".to_owned() + &cpu.print_register(Register8::C));
-            registers.push("D: ".to_owned() + &cpu.print_register(Register8::D));
-            registers.push("E: ".to_owned() + &cpu.print_register(Register8::E));
-            registers.push("H: ".to_owned() + &cpu.print_register(Register8::H));
-            registers.push("L: ".to_owned() + &cpu.print_register(Register8::L));
+        if let Some(gameboy) = &self.gameboy {
+            registers = gameboy.get_registers();
         }
         registers
     }
 
     fn get_flags(&self) -> Vec<String> {
         let mut flags = Vec::new();
-
-        if let Some(cpu) = &self.cpu {
-            flags.push("F: ".to_owned() + &cpu.print_register(Register8::F));
+        if let Some(gameboy) = &self.gameboy {
+            flags = gameboy.get_flags();
         }
         flags
     }
