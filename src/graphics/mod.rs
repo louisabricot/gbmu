@@ -15,6 +15,7 @@ use sdl2::Sdl;
 
 use std::time::Duration;
 
+use super::hardware::cpu::registers::Register8;
 use super::hardware::cpu::Cpu;
 
 mod controller;
@@ -92,17 +93,42 @@ impl Graphics {
                 }
             }
             self.lcd.print_frame();
-            self.debugger.print_frame(
-                vec!["regs".to_string(); self.debugger.registers().get_nb_lines() as usize],
-                vec!["flags".to_string(); self.debugger.flags().get_nb_lines() as usize],
-                match &self.cpu {
-                    Some(cpu) => {
-                        cpu.disassemble(self.debugger.instructions().get_nb_lines() as u16, 0)
-                    }
-                    None => vec![],
-                },
-            );
+            match &self.cpu {
+                Some(cpu) => self.debugger.print_frame(
+                    self.print_registers(),
+                    self.get_flags(),
+                    cpu.disassemble(
+                        self.debugger.instructions().get_nb_lines() as u16,
+                        cpu.registers.pc,
+                    ),
+                ),
+                None => self.debugger.print_frame(vec![], vec![], vec![]),
+            };
             std::thread::sleep(Duration::from_millis(10));
         }
+    }
+
+    fn print_registers(&self) -> Vec<String> {
+        let mut registers = Vec::new();
+
+        if let Some(cpu) = &self.cpu {
+            registers.push("A: ".to_owned() + &cpu.print_register(Register8::A));
+            registers.push("B: ".to_owned() + &cpu.print_register(Register8::B));
+            registers.push("C: ".to_owned() + &cpu.print_register(Register8::C));
+            registers.push("D: ".to_owned() + &cpu.print_register(Register8::D));
+            registers.push("E: ".to_owned() + &cpu.print_register(Register8::E));
+            registers.push("H: ".to_owned() + &cpu.print_register(Register8::H));
+            registers.push("L: ".to_owned() + &cpu.print_register(Register8::L));
+        }
+        registers
+    }
+
+    fn get_flags(&self) -> Vec<String> {
+        let mut flags = Vec::new();
+
+        if let Some(cpu) = &self.cpu {
+            flags.push("F: ".to_owned() + &cpu.print_register(Register8::F));
+        }
+        flags
     }
 }

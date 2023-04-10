@@ -5,7 +5,7 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
-use super::controller::{load_rom, toggle_overlay};
+use super::controller::{load_rom, step, toggle_overlay};
 use super::gui::button::Button;
 use super::gui::textbox::TextBox;
 use super::Graphics;
@@ -111,6 +111,7 @@ impl Debugger {
         for i in 0..nb_buttons {
             let x = i * btn_width + (i + 1) * SPACE_SZ;
             let y = SPACE_SZ * 5 + BTN_HEIGHT * 2 + REG_HEIGHT + PRG_HEIGHT;
+            let funcs: Vec<Option<fn(&mut Graphics)>> = vec![None, None, Some(step)];
             buttons.push(Button::new(
                 (x as i32, y as i32),
                 btn_width,
@@ -118,7 +119,7 @@ impl Debugger {
                 10,
                 labels[i as usize].to_string(),
                 true,
-                None,
+                funcs[i as usize],
             ));
         }
 

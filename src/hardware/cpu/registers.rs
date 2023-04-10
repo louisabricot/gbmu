@@ -46,6 +46,16 @@ pub struct Registers {
     pub pc: u16,
 }
 
+pub enum Register8 {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    H,
+    L,
+}
 #[derive(Debug, Copy, Clone)]
 /// Enumerates the 4 possible pairing of 16-bit registers
 pub enum Register16 {

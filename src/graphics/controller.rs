@@ -17,6 +17,12 @@ pub fn toggle_overlay(graphics: &mut Graphics) {
     }
 }
 
+pub fn step(graphics: &mut Graphics) {
+    if let Some(cpu) = &mut graphics.cpu {
+        cpu.step();
+    }
+}
+
 /// Open a FileDialog then load a Rom into memory
 pub fn load_rom(graphics: &mut Graphics) {
     let path = match FileDialog::new()

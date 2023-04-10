@@ -8,7 +8,7 @@
 //! - [ ] CPU control instructions (halt, stop etc)
 
 use self::registers::flags::Flags;
-use self::registers::{Register16, Registers};
+use self::registers::{Register16, Register8, Registers};
 use super::memory::Memory;
 use crate::hardware::cpu::instructions::{
     At, Bit, Condition, Imm, Instruction, Opcode, Operand16, Operand8, Operation, Page0,
@@ -22,7 +22,7 @@ pub mod registers;
 
 pub struct Cpu {
     /// General-purpose registers, Program Counter and Stack Pointer
-    registers: Registers,
+    pub registers: Registers,
 
     /// CPU state
     state: State,
@@ -82,6 +82,19 @@ impl Cpu {
         }
     }
 
+    pub fn print_register(&self, register: Register8) -> String {
+        match register {
+            Register8::A => format!("{:#04x}", self.registers.a),
+            Register8::B => format!("{:#04x}", self.registers.b),
+            Register8::C => format!("{:#04x}", self.registers.c),
+            Register8::D => format!("{:#04x}", self.registers.d),
+            Register8::E => format!("{:#04x}", self.registers.e),
+            Register8::F => format!("{:08b}", self.registers.f.bits()),
+            Register8::H => format!("{:#04x}", self.registers.h),
+            Register8::L => format!("{:#04x}", self.registers.l),
+        }
+    }
+
     /// TODO
     pub fn step(&mut self) {
         match self.state {
@@ -106,7 +119,6 @@ impl Cpu {
         }
     }
 
-    /// TODO: returns the CPU state
     fn execute(&mut self, instruction: Instruction) {
         match instruction.operation {
             Operation::Load8(dst, src) => self.load8(dst, src),
