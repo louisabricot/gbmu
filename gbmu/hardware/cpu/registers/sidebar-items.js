@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Register16"],"mod":["flags"],"struct":["Registers"]};
+window.SIDEBAR_ITEMS = {"enum":["Register16","Register8"],"mod":["flags"],"struct":["Registers"]};

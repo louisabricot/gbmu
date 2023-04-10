@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_rom","toggle_overlay"]};
+window.SIDEBAR_ITEMS = {"fn":["load_rom","step","toggle_overlay"]};
