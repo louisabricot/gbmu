@@ -57,8 +57,8 @@ pub fn load_rom(graphics: &mut Graphics) {
         }
     };
     let cartridge = Memory::new(content);
-    if GameBoy::check_header_checksum(&cartridge) {
-        graphics.gameboy = Some(GameBoy::new(cartridge));
-        println!("Starting game boy");
+    graphics.gameboy = Some(GameBoy::new(cartridge));
+    if let Some(gameboy) = &mut graphics.gameboy {
+        gameboy.boot();
     }
 }

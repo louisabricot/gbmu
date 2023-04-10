@@ -25,10 +25,10 @@ pub struct Cpu {
     pub registers: Registers,
 
     /// CPU state
-    state: State,
+    pub state: State,
 
     /// TODO
-    memory: Memory,
+    pub memory: Memory,
 }
 
 /// CPU states
@@ -845,30 +845,22 @@ impl Cpu {
     /// controller continue to operate.  
     fn halt(&mut self) {
         self.state = State::Halt;
-        todo!();
     }
 
     /// Does nothing.  
-    fn nop(&mut self) {
-        todo!();
-    }
+    fn nop(&mut self) {}
     /// Stops both the system clock and the oscillator circuit.  
     /// Stop mode stops the LCD controller.  
     /// Stop mode is canceled by a reset signal.
     fn stop(&mut self) {
         self.state = State::Stop;
-        todo!();
     }
 
     /// Disables interrupts
-    fn di(&mut self) {
-        todo!();
-    }
+    fn di(&mut self) {}
 
     /// Enables interrupts
-    fn ei(&mut self) {
-        todo!();
-    }
+    fn ei(&mut self) {}
 
     // Jump instructions
 
