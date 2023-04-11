@@ -2587,7 +2587,7 @@ pub enum Operation {
     /// see [super::Cpu::cpl()]
     Cpl,
 
-    /// see [super::Cpu::addHL_r16()]
+    /// see [super::Cpu::add_hl_r16()]
     AddHL_r16(Operand16),
 
     /// see [super::Cpu::inc16()]
@@ -2596,10 +2596,10 @@ pub enum Operation {
     /// see [super::Cpu::dec16()]
     Dec16(Operand16),
 
-    /// see [super::Cpu::loadHL()]
+    /// see [super::Cpu::load_hl()]
     LoadHL,
 
-    /// see [super::Cpu::addSP_dd()]
+    /// see [super::Cpu::add_sp_dd()]
     AddSP_dd,
 
     /// see [super::Cpu::rlca()]

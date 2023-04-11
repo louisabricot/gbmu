@@ -1,3 +1,5 @@
+//! Cpu fetch step
+
 use super::instructions::Opcode;
 use super::Cpu;
 
