@@ -10,4 +10,5 @@
 //! ``
 pub mod cpu;
 pub mod gameboy;
+pub mod interrupts;
 pub mod memory;

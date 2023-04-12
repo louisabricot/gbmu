@@ -1,5 +1,7 @@
 //!
 
+use super::interrupts::Interrupts;
+
 // From cartridge, usually a fixed bank
 const ROM_BANK_00_START: u16 = 0x0000;
 const INTERRUPT_ADDRESS: u16 = 0x0000;
@@ -75,32 +77,48 @@ const HIGH_RAM_END: u16 = 0xFFFE;
 const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 
 pub struct MemoryMap {
-    memory: Vec<u8>,
+    pub memory: Vec<u8>,
+    pub interrupts: Interrupts,
 }
 
 impl MemoryMap {
     pub fn new(data: Vec<u8>) -> Self {
-        Self { memory: data }
+        Self {
+            memory: data,
+            interrupts: Interrupts::empty(),
+        }
     }
 
     /// Maps the address to the correct memory area
     // To become read8
-    pub fn map(&mut self, address: u16) {
+    pub fn map(&mut self, address: u16) -> Result<u8, String> {
         match address {
-            ROM_BANK_00_START..=ROM_BANK_00_END => println!("rom bank 00"),
-            ROM_BANK_01_START..=ROM_BANK_01_END => println!("rom bank 01"),
+            ROM_BANK_00_START..=ROM_BANK_00_END => Ok(self.memory[address as
+            usize]),
+            ROM_BANK_01_START..=ROM_BANK_01_END => {
+              //TODO: Implement bank switching
+              Ok(self.memory[address as usize],
+            },
             VIDEO_RAM_START..=VIDEO_RAM_END => println!("video ram"),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => println!("video ram"),
-            WORK_RAM_00_START..=WORK_RAM_00_END => println!("video ram"),
-            WORK_RAM_01_START..=WORK_RAM_01_END => println!("video ram"),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
+              //TODO: if cartridge has extra RAM, maps this extra RAM here
+              Ok(self.eram[address - EXTERNAL_RAM_START as usize]),
+            },
+            WORK_RAM_00_START..=WORK_RAM_00_END => {
+              //TODO: free ram for the game to use
+              Ok(self.wram0[address - WORK_RAM_00_START] as usize),
+            },
+            WORK_RAM_01_START..=WORK_RAM_01_END => {
+              //TODO: free ram for the game to use
+              Ok(self.wram1[address - WORK_RAM_01_START] as usize),
+            },
             ECHO_RAM_START..=ECHO_RAM_END => {
-                // TODO: Set the 3 upper bits by the bank swap register
-                let new_address: u16 = address & 0x1FFF;
+              //Reads to work ram instead
+              self.map(address - 0x2000);
             }
             SPRITE_ATTRIBUTE_TABLE_START..=SPRITE_ATTRIBUTE_TABLE_END => {
                 println!("sprite attribute table")
             }
-            NOT_USABLE_START..=NOT_USABLE_END => println!("not usable"),
             INPUT_OUTPUT_REGISTERS_START..=INPUT_OUTPUT_REGISTERS_END => match address {
                 JOYPAD_INPUT => todo!(),
                 SERIAL_TRANSFER_START..=SERIAL_TRANSFER_END => {
@@ -111,32 +129,30 @@ impl MemoryMap {
                 WAVE_PATTERN_START..=WAVE_PATTERN_END => todo!(),
                 LCD_CONTROL_START..=LCD_CONTROL_START => todo!(),
                 BOOT_ROM_LOCK => todo!(),
-                _ => todo!(),
+                _ => Err("Reading this area is forbidden"),
             },
             HIGH_RAM_START..=HIGH_RAM_END => println!("high ram"),
             INTERRUPT_ENABLE_REGISTER => println!("interrupt enable register"),
+            _ => Err("Reading this area is forbidden"),
         }
     }
 
-    pub fn map8(&mut self, address: u16, value: u8) {
+    // To become write8
+    pub fn map8(&mut self, address: u16, value: u8) -> Result<(), String> {
         match address {
-            ROM_BANK_00_START..=ROM_BANK_00_END => println!("rom bank 00"),
-            ROM_BANK_01_START..=ROM_BANK_01_END => println!("rom bank 01"),
             VIDEO_RAM_START..=VIDEO_RAM_END => println!("video ram"),
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => println!("video ram"),
-            WORK_RAM_00_START..=WORK_RAM_00_END => println!("video ram"),
+            WORK_RAM_00_START..=WORK_RAM_00_END => {
+              self.memory[pc as usize] = value;
+              Ok()
+            }
             WORK_RAM_01_START..=WORK_RAM_01_END => println!("video ram"),
             ECHO_RAM_START..=ECHO_RAM_END => {
-                // TODO: Set the 3 upper bits by the bank swap register
-                let new_address: u16 = address & 0x1FFF;
-                //TODO: write at new_address
+              // writes to work RAM instead
+              self.map8(address - 0x2000, value);
             }
             SPRITE_ATTRIBUTE_TABLE_START..=SPRITE_ATTRIBUTE_TABLE_END => {
                 todo!();
-            }
-            NOT_USABLE_START..=NOT_USABLE_END => {
-                // not usable !
-                println!("Not usable area");
             }
             INPUT_OUTPUT_REGISTERS_START..=INPUT_OUTPUT_REGISTERS_END => match address {
                 JOYPAD_INPUT => todo!(),
@@ -154,7 +170,7 @@ impl MemoryMap {
                 }
                 LCD_CONTROL_START..=LCD_CONTROL_START => todo!(),
                 BOOT_ROM_LOCK => todo!(),
-                _ => todo!(),
+                _ => Err("Writing to this area is forbidden"),
             },
             HIGH_RAM_START..=HIGH_RAM_END => println!("high ram"),
             INTERRUPT_ENABLE_REGISTER => println!("interrupt enable register"),

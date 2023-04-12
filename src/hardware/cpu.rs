@@ -91,6 +91,7 @@ impl Cpu {
 
     /// TODO
     pub fn step(&mut self) {
+        //TODO: if interrupt occured / IME is set, change state of cpu
         match self.state {
             State::Running => {
                 let (opcode, size) = match self.fetch(self.registers.pc) {
@@ -102,18 +103,47 @@ impl Cpu {
                 self.execute(instruction);
             }
             State::Halt => {
-                todo!();
+                //TODO: System clock halt
             }
             State::Interrupt => {
-                todo!();
+                // Reset IME flag to prohibit all other interrupts
+                self.memory.interrupts.set_ime(false);
+
+                let interrupt = self.memory.interrupts.get_highest_priority();
+               
+                match interrupt {
+                  Some(i) => {
+                    let address = self.memory.interrupts.get_address(i);
+                    
+                    self.call_u16(Condition::Always, self.registers.pc,
+                    address);
+                    
+                    // Resets the flag and request handled
+                    self.memory.interrupts.remove(i);
+                  },
+                  None => println!("Interrupt state was triggered but no
+                  interrupt were found, is this even possible?"),
+                }
+
+                self.state = State::Running;
             }
             State::Stop => {
                 todo!();
             }
             State::Booting => {
-                todo!();
+                //TODO: map la boot rom
+                //TODO: faire les checks
+                //TODO: afficher l'animation
+                //TODO: passer le controle a la cartridge
+                self.state = State::Running;
+                self.registers.pc = PROGRAM_START_ADDRESS;
             }
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.registers = Registers::empty();
+        self.state = State::Booting;
     }
 
     fn execute(&mut self, instruction: Instruction) {
@@ -867,10 +897,17 @@ impl Cpu {
     }
 
     /// Disables interrupts
-    fn di(&mut self) {}
+    fn di(&mut self) {
+        self.memory.interrupts.set_ime(false);
+        //TODO: cancel any scheduled effects of the EI Instruction if any
+    }
 
     /// Enables interrupts
-    fn ei(&mut self) {}
+    fn ei(&mut self) {
+        self.memory.interrupts.set_ime(true);
+        //TODO: schedule interrupt handling to be enabled after the next machine
+        //cycle
+    }
 
     // Jump instructions
 
@@ -897,10 +934,16 @@ impl Cpu {
     fn call(&mut self, condition: Condition, source: Operand16) {
         let opcode_len = if condition == Condition::Always { 3 } else { 5 };
         let address = self.get_operand16(source);
+
+        self.call_u16(condition, self.registers.pc + opcode_len, address);
+    }
+
+    /// Pushes *saved* onto the stack and loads *address* into `Program
+    /// Counter`.  
+    fn call_u16(&mut self, condition: Condition, saved: u16, address: u16) {
         if self.registers.f.check_condition(condition) {
             self.registers.sp = self.registers.sp.wrapping_sub(2);
-            self.memory
-                .write16(self.registers.sp, self.registers.pc + opcode_len);
+            self.memory.write16(self.registers.sp, saved);
             self.registers.pc = address;
         }
     }
@@ -922,7 +965,7 @@ impl Cpu {
         let address = self.memory.read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
         self.registers.pc = address;
-        //ime = 1;
+        self.memory.interrupts.set_ime(true);
     }
 
     /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
