@@ -14,6 +14,19 @@ pub struct Timer {
   /// loaded into `counter`.  
   modulo: u8;
 
-  /// Selects the timer input clock.  
+  /// Specifies the clock frequency  
   controller: u8;
+}
+
+impl Timer {
+
+  /// Increments the timer *counter* and returns true if an overflow occured.  
+  pub fn count(&mut self) -> bool {
+      let (new_count, overflow) = self.counter.wrapping_add(1);
+      self.counter = new_count;
+      overflow
+  }
+
+  // TODO: somewhere, call count() at the clock frequency specified by the
+  // controller and trigger an interrupt if an overflow occured...
 }

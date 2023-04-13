@@ -129,6 +129,8 @@ impl Cpu {
             }
             State::Stop => {
                 todo!();
+                //TODO: if leaving stop mode, start ticking of timer register
+                //again
             }
             State::Booting => {
                 //TODO: map la boot rom
@@ -894,6 +896,7 @@ impl Cpu {
     /// Stop mode is canceled by a reset signal.
     fn stop(&mut self) {
         self.state = State::Stop;
+        //TODO: reset the divider register
     }
 
     /// Disables interrupts
