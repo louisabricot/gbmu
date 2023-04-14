@@ -1,19 +1,24 @@
 //!
 
-use super::interrupts::Interrupts;
+use super::memory::interrupts::Interrupts;
+use super::memory::timer::Timer;
+use std::ops::BitAnd;
+
+pub mod interrupts;
+pub mod timer;
 
 // From cartridge, usually a fixed bank
-const ROM0_START_ADDRESS: u16 = 0x0000;
-const INTERRUPT_ADDRESS: u16 = 0x0000;
+const ROM0_START: u16 = 0x0000;
+const INTERRUPT: u16 = 0x0000;
 const ROM_DATA_AREA: u16 = 0x100;
 
-const ROM0_END_ADDRESS: u16 = 0x3FFF;
+const ROM0_END: u16 = 0x3FFF;
 
 // From cartridge, switchable bank via mapper
-const ROM1_START_ADDRESS: u16 = 0x4000;
-const ROM1_END_ADDRESS: u16 = 0x7FFF;
+const ROM1_START: u16 = 0x4000;
+const ROM1_END: u16 = 0x7FFF;
 
-// In CGB mode, switchable bank 0/1
+// In CGB mode, switchable bank 0
 const VIDEO_RAM_START: u16 = 0x8000;
 const VIDEO_RAM_END: u16 = 0x9FFF;
 const DMG_VIDEO_RAM_SIZE: u64 = 8 * KIB_IN_BYTE;
@@ -51,11 +56,6 @@ const SERIAL_TRANSFER_END: u16 = 0xFF02;
 
 const TIMER_DIVIDER_START: u16 = 0xFF04;
 const TIMER_DIVIDER_END: u16 = 0xFF07;
-
-const DIVIDER_REGISTER_ADDRESS: u16 = 0xFF04;
-const TIMER_COUNTER_ADDRESS: u16 = 0xFF05;
-const TIMER_MODULO_ADDRESS: u16 = 0xFF06;
-const TIMER_CONTROL_ADDRESS: u16 = 0xFF07;
 
 const AUDIO_START: u16 = 0xFF10;
 const AUDIO_END: u16 = 0xFF26;
@@ -100,136 +100,112 @@ impl MemoryMap {
     pub fn new(data: Vec<u8>) -> Self {
         Self {
             memory: data,
-            eram: self.get_eram(data),
-            wram: Vec::with_capacity(DMG_WORK_RAM_SIZE),
+            eram: Vec::with_capacity(5000),
+            wram: Vec::with_capacity(8192),
             interrupts: Interrupts::empty(),
+            timer: Timer::new(),
         }
     }
 
-    fn get_eram(data: Vec<u8>) -> Vec<u8> {
-        todo!()
+    fn get_eram(data: &Vec<u8>) -> Vec<u8> {
+        data.clone()
     }
 
     /// Maps the address to the correct memory area
     // To become read8
-    pub fn map(&mut self, address: u16) -> Result<u8, String> {
+    pub fn read8(&self, address: u16) -> u8 {
         match address {
-            ROM0_START_ADDRESS..=ROM0_END_ADDRESS => Ok(self.memory[address as
-            usize]),
-            ROM1_START_ADDRESS..=ROM1_END_ADDRESS => {
+            ROM0_START..=ROM0_END => self.memory[address as usize],
+            ROM1_START..=ROM1_END => {
               //TODO: Implement bank switching
-              Ok(self.memory[address as usize]),
-            }
-            VIDEO_RAM_START..=VIDEO_RAM_END => println!("video ram"),
+              self.memory[address as usize]
+            },
+            VIDEO_RAM_START..=VIDEO_RAM_END => todo!(),
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
               //TODO: if cartridge has extra RAM, maps this extra RAM here
-              Ok(self.eram[address - EXTERNAL_RAM_START as usize]),
-            }
+              self.eram[(address - EXTERNAL_RAM_START) as usize]
+            },
             WORK_RAM_00_START..=WORK_RAM_01_END => {
               //TODO: free ram for the game to use
-              Ok(self.wram[address - WORK_RAM_00_START] as usize),
-            }
+              self.wram[(address - WORK_RAM_00_START) as usize]
+            },
             ECHO_RAM_START..=ECHO_RAM_END => {
               //Reads to work ram instead
-              self.map(address - 0x2000);
-            }
+              return self.read8(address - 0x2000);
+            },
             SPRITE_ATTRIBUTE_TABLE_START..=SPRITE_ATTRIBUTE_TABLE_END => {
-                println!("sprite attribute table")
-            }
+              todo!()
+            },
             INPUT_OUTPUT_REGISTERS_START..=INPUT_OUTPUT_REGISTERS_END => match address {
                 JOYPAD_INPUT => todo!(),
-                SERIAL_TRANSFER_START..=SERIAL_TRANSFER_END => {
-                    //y aura pas de communication entre gameboys
-                }
-                TIMER_DIVIDER_START..=TIMER_DIVIDER_END => {
-                  match address {
-                    DIVIDER_REGISTER => Ok(self.timer.divider),
-                    TIMER_COUNTER => Ok(self.timer.counter),
-                    TIMER_MODULO => Ok(self.timer.modulo),
-                    TIMER_CONTROLLER => Ok(self.timer.controller),
-                  }
-                },
+                TIMER_DIVIDER_START..=TIMER_DIVIDER_END => self.timer.get_register(address),
                 AUDIO_START..=AUDIO_END => todo!(),
                 WAVE_PATTERN_START..=WAVE_PATTERN_END => todo!(),
                 LCD_CONTROL_START..=LCD_CONTROL_START => todo!(),
                 BOOT_ROM_LOCK => todo!(),
-                _ => Err("Reading this area is forbidden"),
+                _ => panic!("Forbidden to read at address: {:#06x}", address),
             },
-            HIGH_RAM_START..=HIGH_RAM_END => println!("high ram"),
-            INTERRUPT_ENABLE_REGISTER => println!("interrupt enable register"),
-            _ => Err("Reading this area is forbidden"),
+            HIGH_RAM_START..=HIGH_RAM_END => todo!(),
+            INTERRUPT_ENABLE_REGISTER => todo!(),
+            _ => panic!("Forbidden to read at address:{:#06x}",address),
         }
     }
 
     // To become write8
-    pub fn map8(&mut self, address: u16, value: u8) -> Result<(), String> {
+    pub fn write8(&mut self, address: u16, value: u8) {
+            println!("address in write8 {}", address);
         match address {
-            VIDEO_RAM_START..=VIDEO_RAM_END => println!("video ram"),
-            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.eram[address -
-            EXTERNAL_RAM_START],
-            WORK_RAM_00_START..=WORK_RAM_01_END => self.wram[address - WORK_RAM_00_START as usize] = value,
+            VIDEO_RAM_START..=VIDEO_RAM_END => todo!(),
+            EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.eram[(address -
+            EXTERNAL_RAM_START) as usize] = value,
+            WORK_RAM_00_START..=WORK_RAM_01_END => self.wram[(address -
+            WORK_RAM_00_START) as usize] = value,
             ECHO_RAM_START..=ECHO_RAM_END => {
               // writes to work RAM instead
-              Ok(self.map8(address - 0x2000, value))
+              self.write8(address - 0x2000, value)
             }
             SPRITE_ATTRIBUTE_TABLE_START..=SPRITE_ATTRIBUTE_TABLE_END => {
                 todo!();
             }
             INPUT_OUTPUT_REGISTERS_START..=INPUT_OUTPUT_REGISTERS_END => match address {
                 JOYPAD_INPUT => todo!(),
-                SERIAL_TRANSFER_START..=SERIAL_TRANSFER_END => {
-                    //y aura pas de communication entre gameboys
-                }
                 TIMER_DIVIDER_START..=TIMER_DIVIDER_END => {
                   match address {
                     // Writing to the divider register clears its bits to 0.  
-                    DIVIDER_REGISTER_ADDRESS => self.timer.divider = 0,
+                    DIVIDER_REGISTER => self.timer.divider = 0,
 
-                    TIMER_COUNTER_ADDRESS => self.timer.counter = value,
-                    TIMER_MODULO_ADDRESS => self.timer.modulo = value,
+                    TIMER_COUNTER => self.timer.counter = value,
+                    TIMER_MODULO => self.timer.modulo = value,
                     
                     // Bit 3-7 of timer controller are unused
-                    TIMER_CONTROLLER_ADDRESS => self.timer.controller =
-                    value.bitand_assign(0b00000111),
+                    TIMER_CONTROLLER => self.timer.controller =
+                    value.bitand(0b00000111),
                   }
-                }
-                AUDIO_START..=AUDIO_END => {
-                    //y aura pas d'audio yet
-                }
-                WAVE_PATTERN_START..=WAVE_PATTERN_END => {
-                    //y aura pas d'audio yet
                 }
                 LCD_CONTROL_START..=LCD_CONTROL_START => todo!(),
                 BOOT_ROM_LOCK => todo!(),
-                _ => Err("Writing to this area is forbidden"),
+              _ => panic!("Forbidden to write at address:
+              {:#06x}",address)
             },
-            HIGH_RAM_START..=HIGH_RAM_END => println!("high ram"),
-            INTERRUPT_ENABLE_REGISTER => println!("interrupt enable register"),
+            HIGH_RAM_START..=HIGH_RAM_END => todo!(),
+            INTERRUPT_ENABLE_REGISTER => todo!(),
+              _ => panic!("Forbidden to write at address:
+              {:#06x}",address)
         }
-    }
-    /// Reads the 8-bit value at address pc
-    pub fn read8(&self, pc: u16) -> u8 {
-        self.memory[pc as usize]
     }
 
     /// Reads the 16-bit value at address pc
     /// Returns a native endian value
-    pub fn read16(&self, pc: u16) -> u16 {
-        let hi = self.read8(pc);
-        let lo = self.read8(pc + 1);
+    pub fn read16(&self, address: u16) -> u16 {
+        let hi = self.read8(address);
+        let lo = self.read8(address + 1);
         u16::from_le_bytes([hi, lo])
     }
 
-    /// Writes at address pc the u8 value given as parameter
-    pub fn write8(&mut self, pc: u16, value: u8) {
-        self.memory[pc as usize] = value;
-    }
-
-    /// Write at address pc the u16 value converted into little endian
-    pub fn write16(&mut self, pc: u16, value: u16) {
+    /// Write at address address the u16 value converted into little endian
+    pub fn write16(&mut self, address: u16, value: u16) {
         let bytes = value.to_le_bytes();
-
-        self.memory[pc as usize] = bytes[0];
-        self.memory[pc as usize + 1] = bytes[1];
+        self.write8(address, bytes[0]);
+        self.write8(address + 1, bytes[1]);
     }
 }

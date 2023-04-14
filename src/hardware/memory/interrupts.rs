@@ -142,7 +142,8 @@ impl Interrupts {
         Interrupts::SERIAL => Interrupts::SERIAL_ADDRESS,
         Interrupts::TIMER => Interrupts::TIMER_ADDRESS,
         Interrupts::LCDC => Interrupts::LCDC_ADDRESS,
-        Interrupts::VBLANK => Interrupts::VBLANK_ADDRESS
+        Interrupts::VBLANK => Interrupts::VBLANK_ADDRESS,
+        _ => panic!("dont know what to do")
       }
     }
 }

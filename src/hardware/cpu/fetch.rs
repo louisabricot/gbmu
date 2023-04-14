@@ -10,7 +10,8 @@ impl Cpu {
         let byte = self.memory.read8(address);
 
         if byte == 0xCB {
-            return Ok((self.fetch_cb(address + 1), 2));
+            let next_byte = self.memory.read8(address + 1);
+            return Ok((Cpu::match_cb_opcode(next_byte), 2));
         }
 
         let opcode = match byte {
@@ -283,8 +284,7 @@ impl Cpu {
         Ok((opcode, 1))
     }
 
-    fn fetch_cb(&self, address: u16) -> Opcode {
-        let byte = self.memory.read8(address);
+    fn match_cb_opcode(byte: u8) -> Opcode {
         match byte {
             0x00 => Opcode::Rlc_b,
             0x01 => Opcode::Rlc_c,

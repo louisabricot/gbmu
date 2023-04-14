@@ -9,11 +9,12 @@ use crate::hardware::cpu::instructions::{
     At, Bit, Condition, Imm, Instruction, Opcode, Operand16, Operand8, Operation, Page0,
 };
 use std::ops::{BitAnd, BitAndAssign, BitOrAssign, BitXorAssign};
-pub mod fetch;
 
 #[allow(dead_code)]
+pub mod fetch;
 pub mod instructions;
 pub mod registers;
+const PROGRAM_START_ADDRESS: u16 = 0x150;
 
 pub struct Cpu {
     /// General-purpose registers, Program Counter and Stack Pointer
@@ -66,17 +67,17 @@ impl Cpu {
     /// Reads from the 8-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 1.  
     fn read_imm8(&mut self) -> u8 {
-        let byte = self.memory.read8(self.registers.pc);
+        let imm8 = self.memory.read8(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
-        byte
+        imm8
     }
 
     /// Reads from the 16-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 2.  
     fn read_imm16(&mut self) -> u16 {
-        let word = self.memory.read16(self.registers.pc);
+        let imm16 = self.memory.read16(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(2);
-        word
+        imm16
     }
 
     /// Returns the `Instruction` matching *opcode*.  
@@ -144,7 +145,7 @@ impl Cpu {
     }
 
     pub fn reset(&mut self) {
-        self.registers = Registers::empty();
+        self.registers = Registers::new();
         self.state = State::Booting;
     }
 
@@ -217,7 +218,9 @@ impl Cpu {
     /// `Flag Register` is not affected.  
     fn load8(&mut self, destination: Operand8, source: Operand8) {
         let value = self.get_operand8(source);
+        println!("Source is {:#06x}", value);
         self.load_u8(destination, value);
+        println!("Destination is {:#06x}", self.get_operand8(destination));
     }
 
     /// Loads the 8-bit *data* into *destination*.  
@@ -245,8 +248,11 @@ impl Cpu {
     /// register `HL`.  
     fn load8dec(&mut self, destination: Operand8, source: Operand8) {
         self.load8(destination, source);
+        panic!("reached this panic");
         let new_value = self.registers.read16(Register16::HL).wrapping_sub(1);
+        println!("new value is {:#06x}", new_value);
         self.registers.write16(Register16::HL, new_value);
+        println!("HL is {:#06x}", self.registers.read16(Register16::HL));
     }
 
     /// Loads the value of *source* into *destination* and increments the value of the 16-bit
