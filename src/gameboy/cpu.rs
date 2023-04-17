@@ -5,12 +5,11 @@
 use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::MemoryMap;
-use crate::hardware::cpu::instructions::{
+use self::instructions::{
     At, Bit, Condition, Imm, Instruction, Opcode, Operand16, Operand8, Operation, Page0,
 };
 use std::ops::{BitAnd, BitAndAssign, BitOrAssign, BitXorAssign};
 
-#[allow(dead_code)]
 pub mod fetch;
 pub mod instructions;
 pub mod registers;
@@ -85,7 +84,8 @@ impl Cpu {
     fn decode(opcode: Opcode) -> Instruction {
         let instruction = Instruction::get_by_opcode(opcode);
         match instruction {
-            None => panic!("No Instruction found for opcode, this should never happend"),
+            None => panic!("No Instruction found for opcode, this should never
+            happend {:#04x}", opcode as u8),
             _ => instruction.unwrap(),
         }
     }
@@ -129,7 +129,6 @@ impl Cpu {
                 self.state = State::Running;
             }
             State::Stop => {
-                todo!();
                 //TODO: if leaving stop mode, start ticking of timer register
                 //again
             }
@@ -142,11 +141,6 @@ impl Cpu {
                 self.registers.pc = PROGRAM_START_ADDRESS;
             }
         }
-    }
-
-    pub fn reset(&mut self) {
-        self.registers = Registers::new();
-        self.state = State::Booting;
     }
 
     fn execute(&mut self, instruction: Instruction) {
@@ -172,10 +166,10 @@ impl Cpu {
             Operation::Daa => self.daa(),
             Operation::Cpl => self.cpl(),
 
-            Operation::AddHL_r16(source) => self.add_hl_r16(source),
+            Operation::AddHlR16(source) => self.add_hl_r16(source),
             Operation::Inc16(target) => self.inc16(target),
             Operation::Dec16(target) => self.dec16(target),
-            Operation::AddSP_dd => self.add_sp_dd(),
+            Operation::AddSpDd => self.add_sp_dd(),
             Operation::LoadHL => self.load_hl(),
 
             Operation::Rlca => self.rlca(),
@@ -218,9 +212,7 @@ impl Cpu {
     /// `Flag Register` is not affected.  
     fn load8(&mut self, destination: Operand8, source: Operand8) {
         let value = self.get_operand8(source);
-        println!("Source is {:#06x}", value);
         self.load_u8(destination, value);
-        println!("Destination is {:#06x}", self.get_operand8(destination));
     }
 
     /// Loads the 8-bit *data* into *destination*.  
@@ -248,7 +240,6 @@ impl Cpu {
     /// register `HL`.  
     fn load8dec(&mut self, destination: Operand8, source: Operand8) {
         self.load8(destination, source);
-        panic!("reached this panic");
         let new_value = self.registers.read16(Register16::HL).wrapping_sub(1);
         println!("new value is {:#06x}", new_value);
         self.registers.write16(Register16::HL, new_value);
@@ -1047,7 +1038,6 @@ impl Cpu {
         }
     }
 
-    /// TODO
     fn format_instruction(&self, imm: Imm, mnemonic: &str, address: u16) -> (String, u16) {
         let (value, size) = match imm {
             Imm::Eight => (format!("{:#04x}", self.memory.read8(address)), 1),
@@ -1057,11 +1047,10 @@ impl Cpu {
         (mnemonic.replace("imm", &value), size)
     }
 
-    /// TODO
     pub fn disassemble(&self, lines: u16, mut address: u16) -> Vec<String> {
         let mut mnemonics = Vec::new();
 
-        for i in 0..lines {
+        for _i in 0..lines {
             let mnemonic: String = match self.fetch(address) {
                 Ok((opcode, size)) => {
                     let instruction = Cpu::decode(opcode);
@@ -1075,7 +1064,7 @@ impl Cpu {
                 }
                 Err(..) => {
                     address += 1;
-                    "BAADD".to_string()
+                    "BAD".to_string()
                 }
             };
             mnemonics.push(mnemonic);

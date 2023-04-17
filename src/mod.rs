@@ -1,1 +1,1 @@
-mod hardware;
+mod gameboy;

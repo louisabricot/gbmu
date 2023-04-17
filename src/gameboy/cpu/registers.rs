@@ -5,8 +5,8 @@
 //! Also implements the four 16-bit registers `AF`, `BC`, `DE` and `HL`.  
 //!
 
-use crate::hardware::cpu::instructions::Operand16;
-use crate::hardware::cpu::registers::flags::Flags;
+use super::instructions::Operand16;
+use self::flags::Flags;
 
 pub mod flags;
 
@@ -46,16 +46,6 @@ pub struct Registers {
     pub pc: u16,
 }
 
-pub enum Register8 {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    H,
-    L,
-}
 #[derive(Debug, Copy, Clone)]
 /// Enumerates the 4 possible pairing of 16-bit registers
 pub enum Register16 {

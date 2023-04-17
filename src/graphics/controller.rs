@@ -3,8 +3,8 @@ use native_dialog::{FileDialog, MessageDialog, MessageType};
 
 use std::fs;
 
-use super::super::hardware::gameboy::GameBoy;
-use super::super::hardware::memory::MemoryMap;
+use super::super::gameboy::GameBoy;
+use super::super::gameboy::memory::MemoryMap;
 
 use super::Graphics;
 

@@ -1,5 +1,5 @@
 mod graphics;
-mod hardware;
+mod gameboy;
 use graphics::Graphics;
 
 fn main() {

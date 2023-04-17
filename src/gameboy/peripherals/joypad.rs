@@ -13,7 +13,7 @@ const ACTION: u8 = 0b00100000;
 const DIRECTION: u8 = 0b00010000;
 
 pub enum Action {
-  Start ,
+  Start,
   Select,
   A,
   B

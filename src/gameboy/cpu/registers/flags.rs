@@ -23,7 +23,7 @@
 //! The lowest nibble (bit0-3) is always set to 0, even after a load to the 16-bit register `AF`.  
 //!
 
-use crate::hardware::cpu::Condition;
+use super::super::super::cpu::Condition;
 use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 
 #[derive(Debug)]

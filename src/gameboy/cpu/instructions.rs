@@ -35,7 +35,6 @@ pub enum Clock {
     Sixteen,
     Twenty,
     TwentyFour,
-    ThirtyTwo,
 }
 
 #[derive(Copy, Clone)]
@@ -87,7 +86,7 @@ impl Instruction {
     }
 }
 /// A static array of all the instructions in the instructions set.
-static INSTRUCTIONS: [Instruction; 324] = [
+static INSTRUCTIONS: [Instruction; 325] = [
     Instruction::new(
         Opcode::Nop,
         "NOP",
@@ -155,7 +154,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Opcode::Add_hl_bc,
         "ADD HL, BC",
         None,
-        Operation::AddHL_r16(Operand16::BC),
+        Operation::AddHlR16(Operand16::BC),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -267,7 +266,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Opcode::Add_hl_de,
         "ADD HL, DE",
         None,
-        Operation::AddHL_r16(Operand16::DE),
+        Operation::AddHlR16(Operand16::DE),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -379,7 +378,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Opcode::Add_hl_hl,
         "ADD HL, HL",
         None,
-        Operation::AddHL_r16(Operand16::HL),
+        Operation::AddHlR16(Operand16::HL),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -491,7 +490,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Opcode::Add_hl_sp,
         "ADD HL, SP",
         None,
-        Operation::AddHL_r16(Operand16::SP),
+        Operation::AddHlR16(Operand16::SP),
         [Clock::Eight, Clock::None],
     ),
     Instruction::new(
@@ -1426,6 +1425,13 @@ static INSTRUCTIONS: [Instruction; 324] = [
         [Clock::Four, Clock::None],
     ),
     Instruction::new(
+        Opcode::Cp_a,
+        "CP A",
+        None,
+        Operation::Cp(Operand8::A),
+        [Clock::Four, Clock::None],
+    ),
+    Instruction::new(
         Opcode::Ret_nz,
         "RET NZ",
         None,
@@ -1667,7 +1673,7 @@ static INSTRUCTIONS: [Instruction; 324] = [
         Opcode::Add_sp_r8,
         "ADD SP, imm",
         Some(Imm::Eight),
-        Operation::AddSP_dd,
+        Operation::AddSpDd,
         [Clock::Sixteen, Clock::None],
     ),
     Instruction::new(
@@ -2588,7 +2594,7 @@ pub enum Operation {
     Cpl,
 
     /// see [super::Cpu::add_hl_r16()]
-    AddHL_r16(Operand16),
+    AddHlR16(Operand16),
 
     /// see [super::Cpu::inc16()]
     Inc16(Operand16),
@@ -2600,7 +2606,7 @@ pub enum Operation {
     LoadHL,
 
     /// see [super::Cpu::add_sp_dd()]
-    AddSP_dd,
+    AddSpDd,
 
     /// see [super::Cpu::rlca()]
     Rlca,

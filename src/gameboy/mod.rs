@@ -1,5 +1,7 @@
-use crate::hardware::cpu::Cpu;
-use crate::hardware::memory::MemoryMap;
+use self::cpu::Cpu;
+use self::memory::MemoryMap;
+pub mod memory;
+pub mod cpu;
 
 const PROGRAM_START_ADDRESS: u16 = 0x100;
 const CARTRIDGE_TITLE: u16 = 0x134;
@@ -58,8 +60,8 @@ impl GameBoy {
         // passes control to the cartridge
         self.cpu.set_program_counter(PROGRAM_START_ADDRESS);
     }
+    
     pub fn scroll(&self, logo: Vec<u8>) {
-        println!("Scrolling logo");
     }
 
     pub fn get_logo(&self) -> Vec<u8> {

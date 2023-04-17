@@ -6,11 +6,13 @@
 //! |---|---|---|---|---|---|---|---|
 //! | X | X | X | X | X |TS | ICS   |
 
+ use std::ops::BitAnd;
+
 const DIVIDER_REGISTER: u16 = 0xFF04;
 const TIMER_COUNTER:    u16 = 0xFF05;
 const TIMER_MODULO:     u16 = 0xFF06;
 const TIMER_CONTROLLER: u16 = 0xFF07;
-    
+
 pub struct Timer {
 
   pub divider: u8,
@@ -53,7 +55,17 @@ impl Timer {
           TIMER_COUNTER => self.counter,
           TIMER_MODULO => self.modulo,
           TIMER_CONTROLLER => self.controller,
-          _ => panic!("This code sucks"),
+          _ => todo!(),
+      }
+  }
+
+  pub fn set_register(&mut self, address: u16, value: u8) {
+      match address {
+          DIVIDER_REGISTER => self.divider = value,
+          TIMER_COUNTER => self.counter = value,
+          TIMER_MODULO => self.modulo = value,
+          TIMER_CONTROLLER => self.controller = value.bitand(0b00000111),
+          _ => todo!(),
       }
   }
 }

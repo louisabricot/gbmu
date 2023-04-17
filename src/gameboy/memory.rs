@@ -2,10 +2,10 @@
 
 use super::memory::interrupts::Interrupts;
 use super::memory::timer::Timer;
-use std::ops::BitAnd;
 
 pub mod interrupts;
 pub mod timer;
+
 
 // From cartridge, usually a fixed bank
 const ROM0_START: u16 = 0x0000;
@@ -39,6 +39,7 @@ const WORK_RAM_01_END: u16 = 0xDFFF;
 const ECHO_RAM_START: u16 = 0xE000;
 const ECHO_RAM_END: u16 = 0xFDFF;
 
+// Display RAM
 const SPRITE_ATTRIBUTE_TABLE_START: u16 = 0xFE00;
 const SPRITE_ATTRIBUTE_TABLE_END: u16 = 0xFE9F;
 
@@ -57,6 +58,11 @@ const SERIAL_TRANSFER_END: u16 = 0xFF02;
 const TIMER_DIVIDER_START: u16 = 0xFF04;
 const TIMER_DIVIDER_END: u16 = 0xFF07;
 
+const DIVIDER_REGISTER: u16 = 0xFF04;
+const TIMER_COUNTER:    u16 = 0xFF05;
+const TIMER_MODULO:     u16 = 0xFF06;
+const TIMER_CONTROLLER: u16 = 0xFF07;
+
 const AUDIO_START: u16 = 0xFF10;
 const AUDIO_END: u16 = 0xFF26;
 
@@ -65,8 +71,10 @@ const WAVE_PATTERN_END: u16 = 0xFF3F;
 
 // LCD Control, status, position, scrolling, and palettes
 const LCD_CONTROL_START: u16 = 0xFF40;
+const DMA: u16 = 0xFF46;
+const BGP: u16 = 0xFF47;
 const LCD_CONTROL_END: u16 = 0xFF4B;
-
+//const KEY1: u16 = 0xFF4D; //CGB see 2.6.2
 //const VRAM_BANK_SELECT: u16 = 0xFF4F;
 const BOOT_ROM_LOCK: u16 = 0xFF50;
 
@@ -77,20 +85,18 @@ const VRAM_DMA_END: u16 = 0xFF55;
 //const BACKGROUND_OBJ_PALETTES_END: u16 = 0xFF69;
 
 //const WRAM_BANK_SELECT: u16 = 0xFF70;
-
+//TODO: CGB WRAM BANK SELECT is a register to switch between banks 1-7 see
+//2.6.1
 const HIGH_RAM_START: u16 = 0xFF80;
 const HIGH_RAM_END: u16 = 0xFFFE;
 
 const INTERRUPT_ENABLE_REGISTER: u16 = 0xFFFF;
 
 const KIB_IN_BYTE: u64 = 1024;
-const DMG_WORK_RAM_SIZE: u64 = 8 * KIB_IN_BYTE;
 
 pub struct MemoryMap {
-    pub memory: Vec<u8>,
+    pub rom: Vec<u8>,
     pub eram: Vec<u8>,
-
-    //TODO: check if really need two work ram 
     pub wram: Vec<u8>,
     pub interrupts: Interrupts,
     pub timer: Timer,
@@ -99,15 +105,16 @@ pub struct MemoryMap {
 impl MemoryMap {
     pub fn new(data: Vec<u8>) -> Self {
         Self {
-            memory: data,
-            eram: Vec::with_capacity(5000),
-            wram: Vec::with_capacity(8192),
+            rom: data,
+            eram: vec![0; 8 * KIB_IN_BYTE as usize],
+            wram: vec![0; 8 * KIB_IN_BYTE as usize],
             interrupts: Interrupts::empty(),
             timer: Timer::new(),
         }
     }
 
     fn get_eram(data: &Vec<u8>) -> Vec<u8> {
+        //TODO: load the eram from rom here
         data.clone()
     }
 
@@ -115,12 +122,23 @@ impl MemoryMap {
     // To become read8
     pub fn read8(&self, address: u16) -> u8 {
         match address {
-            ROM0_START..=ROM0_END => self.memory[address as usize],
+            ROM0_START..=ROM0_END => self.rom[address as usize],
             ROM1_START..=ROM1_END => {
               //TODO: Implement bank switching
-              self.memory[address as usize]
+              self.rom[address as usize]
             },
-            VIDEO_RAM_START..=VIDEO_RAM_END => todo!(),
+            VIDEO_RAM_START..=VIDEO_RAM_END => {
+
+              //0x8000 - 0x87FF: Block 0 -> 
+              //0x8800 - 0x8FFF: Block 1 -> 
+              //0X9000 - 0x9FFF: Block 2 -> 
+                // 0x9800 - 0x9BFF: 32x32 tile map 1
+                // 0x9C00 - 0x9FFF: 32x32 tile map 2 
+                // Any of these maps can be used to display the Background or
+                // the Window
+                // Each tile map contains the 1-byte indexes of the tiles to be
+                // displayed
+            },
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => {
               //TODO: if cartridge has extra RAM, maps this extra RAM here
               self.eram[(address - EXTERNAL_RAM_START) as usize]
@@ -141,7 +159,25 @@ impl MemoryMap {
                 TIMER_DIVIDER_START..=TIMER_DIVIDER_END => self.timer.get_register(address),
                 AUDIO_START..=AUDIO_END => todo!(),
                 WAVE_PATTERN_START..=WAVE_PATTERN_END => todo!(),
-                LCD_CONTROL_START..=LCD_CONTROL_START => todo!(),
+                LCD_CONTROL_START..=LCD_CONTROL_END => {
+                    match address {
+                      //0xFF40-0XFF4B;
+                      LCDC => todo!(), //0xFF40
+                      STAT => todo!(), //0xFF41
+                      SCY => todo!(), //0xFF42
+                      SCX => todo!(), //0xFF43
+                      LY => todo!(), //0xFF44
+                      LYC => todo!(), //0xFF45
+                      DMA => todo!(), //0xFF46
+
+                      BCPS => todo!(), //0xFF68
+                      BCPD => todo!(), //0xFF69
+                      OCPS => todo!(), //0xFF6A
+                      OCPD => todo!(), //0xFF6B
+
+                      BGP => 
+                    },
+                },
                 BOOT_ROM_LOCK => todo!(),
                 _ => panic!("Forbidden to read at address: {:#06x}", address),
             },
@@ -153,8 +189,8 @@ impl MemoryMap {
 
     // To become write8
     pub fn write8(&mut self, address: u16, value: u8) {
-            println!("address in write8 {}", address);
         match address {
+            ROM0_START..=ROM1_END => self.rom[address as usize] = value,
             VIDEO_RAM_START..=VIDEO_RAM_END => todo!(),
             EXTERNAL_RAM_START..=EXTERNAL_RAM_END => self.eram[(address -
             EXTERNAL_RAM_START) as usize] = value,
@@ -169,19 +205,8 @@ impl MemoryMap {
             }
             INPUT_OUTPUT_REGISTERS_START..=INPUT_OUTPUT_REGISTERS_END => match address {
                 JOYPAD_INPUT => todo!(),
-                TIMER_DIVIDER_START..=TIMER_DIVIDER_END => {
-                  match address {
-                    // Writing to the divider register clears its bits to 0.  
-                    DIVIDER_REGISTER => self.timer.divider = 0,
-
-                    TIMER_COUNTER => self.timer.counter = value,
-                    TIMER_MODULO => self.timer.modulo = value,
-                    
-                    // Bit 3-7 of timer controller are unused
-                    TIMER_CONTROLLER => self.timer.controller =
-                    value.bitand(0b00000111),
-                  }
-                }
+                TIMER_DIVIDER_START..=TIMER_DIVIDER_END =>
+                self.timer.set_register(address, value),
                 LCD_CONTROL_START..=LCD_CONTROL_START => todo!(),
                 BOOT_ROM_LOCK => todo!(),
               _ => panic!("Forbidden to write at address:

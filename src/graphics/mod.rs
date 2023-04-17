@@ -15,7 +15,7 @@ use sdl2::Sdl;
 
 use std::time::Duration;
 
-use super::hardware::gameboy::GameBoy;
+use super::gameboy::GameBoy;
 
 mod controller;
 mod debugger;
