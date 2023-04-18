@@ -19,15 +19,20 @@ const NINTENDO_LOGO: [u8; NINTENDO_LOGO_SIZE as usize] = [
     0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
 ];
 
+/// 
 pub struct GameBoy {
     cpu: Rc<Cpu>,
+    speed: SpeedMode,
+    cpu: Cpu,
 }
 
+/// Enumerates the GameBoy's speed mode.  
 enum SpeedMode {
     Double,
     Normal,
 }
 
+/// Enumerates the GameBoy's model.  
 pub enum Model {
     DMG,
     CGB,

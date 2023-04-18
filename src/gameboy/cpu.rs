@@ -60,6 +60,8 @@ impl Cpu {
         }
     }
 
+    pub fn set_memory(&mut self, memory: 
+
     /// Sets the `Program Counter` to *pc*.  
     pub fn set_program_counter(&mut self, pc: u16) {
         self.registers.pc = pc
