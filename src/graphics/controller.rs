@@ -4,7 +4,7 @@ use native_dialog::{FileDialog, MessageDialog, MessageType};
 use std::fs;
 
 use super::super::gameboy::GameBoy;
-use super::super::gameboy::memory::MemoryMap;
+use super::super::gameboy::memory::Memory;
 
 use super::Graphics;
 
@@ -56,7 +56,7 @@ pub fn load_rom(graphics: &mut Graphics) {
             return;
         }
     };
-    let cartridge = MemoryMap::new(content);
+    let cartridge = Cartridge::new(content);
     graphics.gameboy = Some(GameBoy::new(cartridge));
     if let Some(gameboy) = &mut graphics.gameboy {
         gameboy.boot();

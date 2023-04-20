@@ -1,5 +1,7 @@
+use std::rc::Rc;
 use self::cpu::Cpu;
-use self::memory::MemoryMap;
+use self::memory::Memory;
+
 pub mod memory;
 pub mod cpu;
 
@@ -18,9 +20,7 @@ const NINTENDO_LOGO: [u8; NINTENDO_LOGO_SIZE as usize] = [
 ];
 
 pub struct GameBoy {
-    model: Model,
-    speed: SpeedMode,
-    cpu: Cpu,
+    cpu: Rc<Cpu>,
 }
 
 enum SpeedMode {
@@ -34,95 +34,24 @@ pub enum Model {
 }
 
 impl GameBoy {
-    pub fn new(cartridge: MemoryMap) -> Self {
+    pub fn new() -> Self {
         Self {
-            model: Model::DMG,
-            speed: SpeedMode::Normal,
-            cpu: Cpu::new(cartridge),
+            cpu: Rc::new(Cpu::new()),
+            memory: None,
         }
-    }
-
-    ///
-    pub fn boot(&mut self) {
-        //unpack the logo from the header
-        let logo = self.get_logo();
-
-        self.scroll(logo);
-
-        //ba-ding!
-
-        //check logo header checksums
-        if !self.check_logo() || !self.check_header_checksum() {
-            println!("invalid logo or checksum");
-        }
-        println!("passes control to the cartridge");
-
-        // passes control to the cartridge
-        self.cpu.set_program_counter(PROGRAM_START_ADDRESS);
     }
     
-    pub fn scroll(&self, logo: Vec<u8>) {
+    fn set_memory(&mut self, cartridge: Cartridge) {
+        self.cpu.memory = match cartridge.get_model() {
+            Model::CGB => Some(Box::new( CGB { cartridge })),
+            _ => Some(Box::new( DMG{ cartridge })),
+        };
     }
 
-    pub fn get_logo(&self) -> Vec<u8> {
-        let mut logo = Vec::new();
-
-        for i in CARTRIDGE_NINTENDO_LOGO_START..=CARTRIDGE_NINTENDO_LOGO_END {
-            logo.push(self.cpu.memory.read8(i));
+    fn run(&mut self) {
+        match self.cpu.memory {
+            Some(memory) => loop { self.cpu.step() },
+            None => println!("Missing cartridge"),
         }
-        logo
-    }
-
-    // cgb checks half of logo
-    pub fn check_logo(&self) -> bool {
-        for i in 0..NINTENDO_LOGO_SIZE {
-            if self.cpu.memory.read8(CARTRIDGE_NINTENDO_LOGO_START + i) != NINTENDO_LOGO[i as usize]
-            {
-                return false;
-            }
-        }
-        true
-    }
-
-    pub fn check_header_checksum(&self) -> bool {
-        let mut checksum: u8 = 0;
-
-        for i in CARTRIDGE_TITLE..CARTRIDGE_HEADER_CHECKSUM {
-            checksum = checksum.wrapping_sub(self.cpu.memory.read8(i));
-            checksum = checksum.wrapping_sub(1);
-        }
-        checksum == self.cpu.memory.read8(CARTRIDGE_HEADER_CHECKSUM)
-    }
-
-    pub fn get_program_counter(&self) -> u16 {
-        self.cpu.registers.pc
-    }
-
-    pub fn step(&mut self) {
-        self.cpu.step()
-    }
-
-    pub fn get_registers(&self) -> Vec<String> {
-        let mut contents = Vec::new();
-
-        contents.push(format!("{}: {:#04x}", "A", self.cpu.registers.a));
-        contents.push(format!("{}: {:#04x}", "B", self.cpu.registers.b));
-        contents.push(format!("{}: {:#04x}", "C", self.cpu.registers.c));
-        contents.push(format!("{}: {:#04x}", "D", self.cpu.registers.d));
-        contents.push(format!("{}: {:#04x}", "E", self.cpu.registers.e));
-        contents.push(format!("{}: {:#04x}", "H", self.cpu.registers.h));
-        contents.push(format!("{}: {:#04x}", "L", self.cpu.registers.l));
-        contents
-    }
-
-    pub fn get_flags(&self) -> Vec<String> {
-        let mut flags = Vec::new();
-
-        flags.push(format!("{}: {:08b}", "F", self.cpu.registers.f.bits()));
-        flags
-    }
-
-    pub fn disassemble(&self, lines: u16, mut address: u16) -> Vec<String> {
-        self.cpu.disassemble(lines, address)
     }
 }

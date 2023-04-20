@@ -4,7 +4,7 @@
 
 use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
-use super::memory::MemoryMap;
+use super::memory::Memory;
 use self::instructions::{
     At, Bit, Condition, Imm, Instruction, Opcode, Operand16, Operand8, Operation, Page0,
 };
@@ -13,6 +13,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOrAssign, BitXorAssign};
 pub mod fetch;
 pub mod instructions;
 pub mod registers;
+
 const PROGRAM_START_ADDRESS: u16 = 0x150;
 
 pub struct Cpu {
@@ -22,8 +23,7 @@ pub struct Cpu {
     /// CPU state
     pub state: State,
 
-    /// TODO
-    pub memory: MemoryMap,
+    pub memory: Option<Box<dyn Memory>>,
 }
 
 /// CPU states
@@ -50,12 +50,13 @@ pub enum State {
 }
 
 impl Cpu {
+    
     /// Initializes CPU with default values
-    pub fn new(memory: MemoryMap) -> Self {
+    pub fn new() -> Self {
         Self {
             registers: Registers::new(),
             state: State::Booting,
-            memory,
+            memory: None,
         }
     }
 
@@ -66,7 +67,7 @@ impl Cpu {
     /// Reads from the 8-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 1.  
     fn read_imm8(&mut self) -> u8 {
-        let imm8 = self.memory.read8(self.registers.pc);
+        let imm8 = self.memory.unwrap().read8(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
         imm8
     }
@@ -74,7 +75,7 @@ impl Cpu {
     /// Reads from the 16-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 2.  
     fn read_imm16(&mut self) -> u16 {
-        let imm16 = self.memory.read16(self.registers.pc);
+        let imm16 = memory.unwrap().read16(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(2);
         imm16
     }
@@ -90,8 +91,8 @@ impl Cpu {
         }
     }
 
-    /// TODO
     pub fn step(&mut self) {
+        
         //TODO: if interrupt occured / IME is set, change state of cpu
         match self.state {
             State::Running => {
@@ -108,19 +109,19 @@ impl Cpu {
             }
             State::Interrupt => {
                 // Reset IME flag to prohibit all other interrupts
-                self.memory.interrupts.set_ime(false);
+                self.memory.unwrap().interrupts.set_ime(false);
 
-                let interrupt = self.memory.interrupts.get_highest_priority();
+                let interrupt = self.memory.unwrap().interrupts.get_highest_priority();
                
                 match interrupt {
                   Some(i) => {
-                    let address = self.memory.interrupts.get_address(i);
+                    let address = self.memory.unwrap().interrupts.get_address(i);
                     
                     self.call_u16(Condition::Always, self.registers.pc,
                     address);
                     
                     // Resets the flag and request handled
-                    self.memory.interrupts.remove(i);
+                    self.memory.unwrap().interrupts.remove(i);
                   },
                   None => println!("Interrupt state was triggered but no
                   interrupt were found, is this even possible?"),
@@ -131,14 +132,6 @@ impl Cpu {
             State::Stop => {
                 //TODO: if leaving stop mode, start ticking of timer register
                 //again
-            }
-            State::Booting => {
-                //TODO: map la boot rom
-                //TODO: faire les checks
-                //TODO: afficher l'animation
-                //TODO: passer le controle a la cartridge
-                self.state = State::Running;
-                self.registers.pc = PROGRAM_START_ADDRESS;
             }
         }
     }
@@ -230,7 +223,7 @@ impl Cpu {
             Operand8::L => self.registers.l = data,
             Operand8::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.write8(address, data);
+                self.memory.unwrap().write8(address, data);
             }
             _ => panic!("Not a valid Operand8 for load_u8()"),
         }
@@ -269,7 +262,7 @@ impl Cpu {
             Operand16::SP => self.registers.sp = data,
             Operand16::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.write16(address, data);
+                self.memory.unwrap().write16(address, data);
             }
             _ => panic!("Not a valid Operand16 for load16()"),
         }
@@ -283,7 +276,7 @@ impl Cpu {
         let value = self.registers.read16(Registers::get_register16(source));
 
         self.registers.sp = self.registers.sp.wrapping_sub(1);
-        self.memory.write16(self.registers.sp, value);
+        self.memory.unwrap().write16(self.registers.sp, value);
         self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
 
@@ -292,7 +285,7 @@ impl Cpu {
     /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
     /// `Registers::get_register16()` panics.
     fn pop(&mut self, target: Operand16) {
-        let value = self.memory.read16(self.registers.sp);
+        let value = self.memory.unwrap().read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
 
         self.registers
@@ -898,13 +891,13 @@ impl Cpu {
 
     /// Disables interrupts
     fn di(&mut self) {
-        self.memory.interrupts.set_ime(false);
+        self.memory.unwrap().interrupts.set_ime(false);
         //TODO: cancel any scheduled effects of the EI Instruction if any
     }
 
     /// Enables interrupts
     fn ei(&mut self) {
-        self.memory.interrupts.set_ime(true);
+        self.memory.unwrap().interrupts.set_ime(true);
         //TODO: schedule interrupt handling to be enabled after the next machine
         //cycle
     }
@@ -943,7 +936,7 @@ impl Cpu {
     fn call_u16(&mut self, condition: Condition, saved: u16, address: u16) {
         if self.registers.f.check_condition(condition) {
             self.registers.sp = self.registers.sp.wrapping_sub(2);
-            self.memory.write16(self.registers.sp, saved);
+            self.memory.unwrap().write16(self.registers.sp, saved);
             self.registers.pc = address;
         }
     }
@@ -952,7 +945,7 @@ impl Cpu {
     /// onto `Program Counter`.  
     /// `Flag Register` is not updated.  
     fn ret(&mut self, condition: Condition) {
-        let address = self.memory.read16(self.registers.sp);
+        let address = self.memory.unwrap().read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
         if self.registers.f.check_condition(condition) {
             self.registers.pc = address;
@@ -962,17 +955,17 @@ impl Cpu {
     /// Pops the 16-bit value on the top of memory stack and loads it onto `Program Counter`.  
     /// Enables the Master Interrupt flag.  
     fn reti(&mut self) {
-        let address = self.memory.read16(self.registers.sp);
+        let address = self.memory.unwrap().read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
         self.registers.pc = address;
-        self.memory.interrupts.set_ime(true);
+        self.memory.unwrap().interrupts.set_ime(true);
     }
 
     /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
     /// `Program Counter`.
     fn rst(&mut self, address: Page0) {
         self.registers.sp = self.registers.sp.wrapping_sub(2);
-        self.memory.write16(self.registers.sp, self.registers.pc);
+        self.memory.unwrap().write16(self.registers.sp, self.registers.pc);
         self.registers.pc = address as u16;
     }
 
@@ -1010,7 +1003,7 @@ impl Cpu {
             Operand8::Imm8 => self.read_imm8(),
             Operand8::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.read8(address)
+                self.memory.unwrap().read8(address)
             }
         }
     }
@@ -1033,15 +1026,15 @@ impl Cpu {
             Operand16::Imm8 => self.read_imm8() as u16,
             Operand16::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.read16(address)
+                self.memory.unwrap().read16(address)
             }
         }
     }
 
     fn format_instruction(&self, imm: Imm, mnemonic: &str, address: u16) -> (String, u16) {
         let (value, size) = match imm {
-            Imm::Eight => (format!("{:#04x}", self.memory.read8(address)), 1),
-            Imm::Sixteen => (format!("{:#08x}", self.memory.read16(address)), 2),
+            Imm::Eight => (format!("{:#04x}", self.memory.unwrap().read8(address)), 1),
+            Imm::Sixteen => (format!("{:#08x}", self.memory.unwrap().read16(address)), 2),
         };
 
         (mnemonic.replace("imm", &value), size)
@@ -1092,7 +1085,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(cpu.get_operand8(Operand8::A), cpu.registers.a);
         assert_eq!(cpu.get_operand8(Operand8::E), cpu.registers.e);
@@ -1119,7 +1112,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(
             cpu.get_operand16(Operand16::AF),
@@ -1156,7 +1149,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(
             cpu.get_address(At::BC),
@@ -1186,7 +1179,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.pop(Operand16::BC);
         assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(0));
@@ -1218,7 +1211,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.pop(Operand16::SP);
     }
@@ -1239,7 +1232,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.push(Operand16::BC);
         assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(10));
@@ -1267,7 +1260,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.push(Operand16::SP);
     }
@@ -1288,7 +1281,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.load16(Operand16::BC, Operand16::SP);
@@ -1321,7 +1314,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.load16(Operand16::AF, Operand16::AF);
     }
@@ -1342,7 +1335,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.load_u8(Operand8::L, cpu.memory.read8(0));
         assert_eq!(cpu.registers.l, 10);
@@ -1374,7 +1367,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.load_u8(Operand8::Imm8, cpu.memory.read8(0));
     }
@@ -1395,7 +1388,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.dec8(Operand8::A);
@@ -1443,7 +1436,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.inc8(Operand8::A);
@@ -1491,7 +1484,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.cp(Operand8::A);
@@ -1539,7 +1532,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.or(Operand8::A);
@@ -1579,7 +1572,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.xor(Operand8::B);
@@ -1620,7 +1613,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.and(Operand8::H);
@@ -1661,7 +1654,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert_eq!(cpu.sub_u8(0xff), 11);
@@ -1704,7 +1697,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.sbc(Operand8::D);
@@ -1751,7 +1744,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.add_u8_to_a(2);
@@ -1793,7 +1786,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.add8(Operand8::B);
@@ -1834,7 +1827,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.adc(Operand8::B);
@@ -1875,7 +1868,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.cpl();
@@ -1917,7 +1910,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -1955,7 +1948,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -1993,7 +1986,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.load_hl();
@@ -2020,7 +2013,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rlca();
@@ -2047,7 +2040,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rla();
@@ -2074,7 +2067,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rrca();
@@ -2101,7 +2094,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rr(Operand8::A);
@@ -2128,7 +2121,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rlc(Operand8::B);
@@ -2162,7 +2155,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 17, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 17, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rl(Operand8::B);
@@ -2196,7 +2189,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rrc(Operand8::B);
@@ -2230,7 +2223,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 138, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 138, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rr(Operand8::A);
@@ -2264,7 +2257,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.sla(Operand8::D);
@@ -2298,7 +2291,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 1, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 1, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.sra(Operand8::D);
@@ -2332,7 +2325,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.srl(Operand8::A);
@@ -2365,7 +2358,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.swap(Operand8::A);
@@ -2399,7 +2392,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.bit(Bit::Seven, Operand8::A);
@@ -2433,7 +2426,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.set(Bit::Two, Operand8::A);
@@ -2467,7 +2460,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.res(Bit::Seven, Operand8::A);
@@ -2501,7 +2494,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -2538,7 +2531,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -2575,7 +2568,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.jp(Condition::Always, Operand16::HL);
@@ -2609,7 +2602,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 55, 147, 0xF0, 2, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 55, 147, 0xF0, 2, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.jr(Condition::Always);
@@ -2642,7 +2635,7 @@ mod tests {
                 pc: 0x800,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.call(Condition::Always, Operand16::DE);
         assert_eq!(cpu.registers.pc, 0x4);
@@ -2666,7 +2659,7 @@ mod tests {
                 pc: 0x0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.ret(Condition::Always);
         //assert_eq!(cpu.registers.pc, 0x03);
@@ -2689,7 +2682,7 @@ mod tests {
                 pc: 0x0,
             },
             state: State::Running,
-            memory: MemoryMap::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: Memory::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rst(Page0::Byte1);
