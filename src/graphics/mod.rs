@@ -32,7 +32,7 @@ pub struct Graphics {
     pub lcd: Lcd,
     /// Debugger Window providing options for the GameBoy emulator
     pub debugger: Debugger,
-    pub gameboy: Option<GameBoy>,
+    pub gameboy: GameBoy,
 }
 
 impl Graphics {
@@ -47,7 +47,7 @@ impl Graphics {
             sdl_context,
             lcd,
             debugger,
-            gameboy: None,
+            gameboy: GameBoy::new(),
         }
     }
 
@@ -92,34 +92,27 @@ impl Graphics {
                 }
             }
             self.lcd.print_frame();
-            match &self.gameboy {
-                Some(gameboy) => self.debugger.print_frame(
-                    self.print_registers(),
-                    self.get_flags(),
-                    gameboy.disassemble(
-                        self.debugger.instructions().get_nb_lines() as u16,
-                        gameboy.get_program_counter(),
-                    ),
+            self.debugger.print_frame(
+                self.print_registers(),
+                self.get_flags(),
+                self.gameboy.disassemble(
+                    self.debugger.instructions().get_nb_lines() as u16,
+                    self.gameboy.get_program_counter(),
                 ),
-                None => self.debugger.print_frame(vec![], vec![], vec![]),
-            };
+            );
             std::thread::sleep(Duration::from_millis(10));
         }
     }
 
     fn print_registers(&self) -> Vec<String> {
         let mut registers = Vec::new();
-        if let Some(gameboy) = &self.gameboy {
-            registers = gameboy.get_registers();
-        }
+        registers = self.gameboy.get_registers();
         registers
     }
 
     fn get_flags(&self) -> Vec<String> {
         let mut flags = Vec::new();
-        if let Some(gameboy) = &self.gameboy {
-            flags = gameboy.get_flags();
-        }
+        flags = self.gameboy.get_flags();
         flags
     }
 }

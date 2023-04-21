@@ -19,6 +19,7 @@
 //!   TODO: 2.1 implement that interrupts are prohibited when IME is false
 
 use std::ops::{BitAndAssign, BitOrAssign};
+
 pub struct Interrupts {
     /// Interrupt Flag (IF)
     flags: u8,

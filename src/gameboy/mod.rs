@@ -1,7 +1,10 @@
 use std::rc::Rc;
 use self::cpu::Cpu;
 use self::memory::Memory;
+use self::memory::dmg::DMG;
+ use crate::gameboy::peripherals::cartridge::Cartridge;
 
+pub mod peripherals;
 pub mod memory;
 pub mod cpu;
 
@@ -23,7 +26,6 @@ const NINTENDO_LOGO: [u8; NINTENDO_LOGO_SIZE as usize] = [
 pub struct GameBoy {
     cpu: Rc<Cpu>,
     speed: SpeedMode,
-    cpu: Cpu,
 }
 
 /// Enumerates the GameBoy's speed mode.  
@@ -42,21 +44,25 @@ impl GameBoy {
     pub fn new() -> Self {
         Self {
             cpu: Rc::new(Cpu::new()),
-            memory: None,
+            speed: SpeedMode::Normal,
         }
     }
     
-    fn set_memory(&mut self, cartridge: Cartridge) {
-        self.cpu.memory = match cartridge.get_model() {
-            Model::CGB => Some(Box::new( CGB { cartridge })),
-            _ => Some(Box::new( DMG{ cartridge })),
+    pub fn set_memory(&mut self, cartridge: impl Cartridge) {
+        self.cpu.memory = match cartridge.get_type() {
+            //Model::CGB => Some(Box::new( CGB { cartridge })),
+            _ => Some(Box::new( DMG::new( cartridge ) )),
         };
     }
 
-    fn run(&mut self) {
+    pub fn run(&mut self) {
         match self.cpu.memory {
             Some(memory) => loop { self.cpu.step() },
             None => println!("Missing cartridge"),
         }
+    }
+
+    pub fn make_cartridge(cartridge: Vec<u8>) -> impl Cartridge {
+        todo!();
     }
 }

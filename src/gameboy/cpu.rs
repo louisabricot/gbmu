@@ -17,12 +17,14 @@ pub mod registers;
 const PROGRAM_START_ADDRESS: u16 = 0x150;
 
 pub struct Cpu {
+
     /// General-purpose registers, Program Counter and Stack Pointer
     pub registers: Registers,
 
     /// CPU state
     pub state: State,
 
+    /// Memory is optional. Cpu is initialized without.
     pub memory: Option<Box<dyn Memory>>,
 }
 
@@ -36,16 +38,12 @@ pub enum State {
     /// and all writes to this area are ignored.  
     Booting,
 
-    /// TODO
     Running,
 
-    /// TODO
     Halt,
 
-    /// TODO
     Stop,
 
-    /// TODO
     Interrupt,
 }
 
@@ -60,12 +58,11 @@ impl Cpu {
         }
     }
 
-    pub fn set_memory(&mut self, memory: 
-
     /// Sets the `Program Counter` to *pc*.  
     pub fn set_program_counter(&mut self, pc: u16) {
         self.registers.pc = pc
     }
+
     /// Reads from the 8-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 1.  
     fn read_imm8(&mut self) -> u8 {
@@ -77,7 +74,7 @@ impl Cpu {
     /// Reads from the 16-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 2.  
     fn read_imm16(&mut self) -> u16 {
-        let imm16 = memory.unwrap().read16(self.registers.pc);
+        let imm16 = self.memory.unwrap().read16(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(2);
         imm16
     }
@@ -111,7 +108,7 @@ impl Cpu {
             }
             State::Interrupt => {
                 // Reset IME flag to prohibit all other interrupts
-                self.memory.unwrap().interrupts.set_ime(false);
+                self.memory.unwrap().get_interrupts().set_ime(false);
 
                 let interrupt = self.memory.unwrap().interrupts.get_highest_priority();
                

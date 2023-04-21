@@ -7,10 +7,10 @@ impl Cpu {
     /// Returns the Opcode enum matching the opcode read from memory
     /// If the opcode is 0xCB, the next byte is matched against CB-prefixed opcodes
     pub fn fetch(&self, address: u16) -> Result<(Opcode, u16), String> {
-        let byte = self.memory.read8(address);
+        let byte = self.memory.unwrap().read8(address);
 
         if byte == 0xCB {
-            let next_byte = self.memory.read8(address + 1);
+            let next_byte = self.memory.unwrap().read8(address + 1);
             return Ok((Cpu::match_cb_opcode(next_byte), 2));
         }
 

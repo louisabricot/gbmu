@@ -1,8 +1,8 @@
-<<<<<<< HEAD
-//! 
-//! 
+use crate::gameboy::peripherals::cartridge::Cartridge;
 
-use super::peripherals::cartridge::Cartridge;
+pub mod timer;
+pub mod interrupts;
+pub mod dmg;
 
 /// Defines the shared behaviour between DMG and CGB memory.  
 pub trait Memory {
@@ -26,4 +26,6 @@ pub trait Memory {
         self.write8(address, bytes[0]);
         self.write8(address + 1, bytes[1]);
     }
+
+    fn get_interrupts(&mut self);
 }

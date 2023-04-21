@@ -4,7 +4,6 @@ use native_dialog::{FileDialog, MessageDialog, MessageType};
 use std::fs;
 
 use super::super::gameboy::GameBoy;
-use super::super::gameboy::memory::Memory;
 
 use super::Graphics;
 
@@ -17,14 +16,12 @@ pub fn toggle_overlay(graphics: &mut Graphics) {
     }
 }
 
-pub fn step(graphics: &mut Graphics) {
-    if let Some(gameboy) = &mut graphics.gameboy {
-        gameboy.step();
-    }
+pub fn step(&mut self) {
+    self.gameboy.step();
 }
 
 /// Open a FileDialog then load a Rom into memory
-pub fn load_rom(graphics: &mut Graphics) {
+pub fn load_rom(&mut self) {
     let path = match FileDialog::new()
         .add_filter("rom", &["gb"])
         .show_open_single_file()
@@ -56,9 +53,7 @@ pub fn load_rom(graphics: &mut Graphics) {
             return;
         }
     };
-    let cartridge = Cartridge::new(content);
-    graphics.gameboy = Some(GameBoy::new(cartridge));
-    if let Some(gameboy) = &mut graphics.gameboy {
-        gameboy.boot();
-    }
+    let cartridge = GameBoy::make_cartridge(content);
+    self.gameboy.set_memory(cartridge);
+    self.gameboy.run();
 }

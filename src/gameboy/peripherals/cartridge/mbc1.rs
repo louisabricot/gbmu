@@ -1,4 +1,5 @@
-//!
+use crate::gameboy::Cartridge;
+
 pub struct MBC1 {
     
     /// RAM gate register enables access to the cartridge SRAM (if there is one). 
@@ -15,7 +16,18 @@ pub struct MBC1 {
 
 
 impl Cartridge for MBC1 {
-    
+
+    fn new(&self, cartridge: Vec<u8>) -> Self where Self: Sized {
+        todo!();
+    }
+
+    fn read8(&self, address: u16) -> u8 {
+        todo!();
+    }
+
+    fn write8(&mut self, address: u16, value: u8) {
+        todo!();
+    }
 }
 
 

@@ -43,19 +43,4 @@ pub struct Joypad {
 
 impl Joypad {
 
-    pub fn update(&mut self, p1: u8) {
-      let button = match (select_buttons(p1)) {
-        Output::Action => todo, 
-        Output::Direction => 
-      }
-    }
-
-    fn select_buttons(p1: u8) -> Option<Output> {
-      let select_pins = 0b00110000;
-      match p1 & select_pins {
-        ACTION => Some(Output::Action),
-        DIRECTION => Some(Output::Direction),
-        _ => None,
-      }
-    }
 }
