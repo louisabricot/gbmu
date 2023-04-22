@@ -2,7 +2,7 @@ use std::rc::Rc;
 use self::cpu::Cpu;
 use self::memory::Memory;
 use self::memory::dmg::DMG;
- use crate::gameboy::peripherals::cartridge::Cartridge;
+use crate::gameboy::peripherals::cartridge::Cartridge;
 
 pub mod peripherals;
 pub mod memory;
@@ -11,6 +11,8 @@ pub mod cpu;
 const PROGRAM_START_ADDRESS: u16 = 0x100;
 const CARTRIDGE_TITLE: u16 = 0x134;
 const CARTRIDGE_HEADER_CHECKSUM: u16 = 0x14D;
+
+const CARTRIDGE_CGB_FLAG: u16 = 0x143;
 
 const CARTRIDGE_NINTENDO_LOGO_START: u16 = 0x104;
 const CARTRIDGE_NINTENDO_LOGO_END: u16 = 0x133;
@@ -47,11 +49,12 @@ impl GameBoy {
             speed: SpeedMode::Normal,
         }
     }
-    
-    pub fn set_memory(&mut self, cartridge: impl Cartridge) {
-        self.cpu.memory = match cartridge.get_type() {
+
+    pub fn set_memory(&mut self, content: Vec<u8>) {
+        self.cpu.memory = match content[CARTRIDGE_CGB_FLAG as usize] {
+            //TODO: trouver les valeurs de CGB flag (0x80, 0xc0)
             //Model::CGB => Some(Box::new( CGB { cartridge })),
-            _ => Some(Box::new( DMG::new( cartridge ) )),
+            _ => Some(Box::new( DMG::new( content ) )),
         };
     }
 
@@ -60,9 +63,5 @@ impl GameBoy {
             Some(memory) => loop { self.cpu.step() },
             None => println!("Missing cartridge"),
         }
-    }
-
-    pub fn make_cartridge(cartridge: Vec<u8>) -> impl Cartridge {
-        todo!();
     }
 }

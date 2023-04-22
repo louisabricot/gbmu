@@ -1,4 +1,5 @@
 use crate::gameboy::peripherals::cartridge::Cartridge;
+use crate::gameboy::memory::interrupts::Interrupts;
 
 pub mod timer;
 pub mod interrupts;
@@ -27,5 +28,6 @@ pub trait Memory {
         self.write8(address + 1, bytes[1]);
     }
 
-    fn get_interrupts(&mut self);
+    fn get_interrupts(&mut self) -> Interrupts;
+
 }

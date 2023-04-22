@@ -15,14 +15,16 @@ pub struct MBC1 {
 }
 
 
+impl MBC1 {
+    pub fn new(content: Vec<u8>) -> Self {
+        todo!()
+    }
+}
+
 impl Cartridge for MBC1 {
 
-    fn new(&self, cartridge: Vec<u8>) -> Self where Self: Sized {
-        todo!();
-    }
-
     fn read8(&self, address: u16) -> u8 {
-        todo!();
+        todo!()
     }
 
     fn write8(&mut self, address: u16, value: u8) {

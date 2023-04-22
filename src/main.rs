@@ -1,10 +1,8 @@
-mod graphics;
 mod gameboy;
-use graphics::Graphics;
+use crate::gameboy::GameBoy;
 
 fn main() {
-    let mut graphics: Graphics = Graphics::new();
-    graphics.render();
+    let mut GameBoy: GameBoy = GameBoy::new();
 }
 
 #[cfg(test)]

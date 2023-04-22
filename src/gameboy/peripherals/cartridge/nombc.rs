@@ -1,10 +1,18 @@
+use crate::gameboy::Cartridge;
 
-impl Cartridge for NoMCB {
+pub struct NoMBC {
+    data: Vec<u8>,
+}
+
+impl NoMBC {
 
     /// Creates a NoMCB type of cartridge.  
-    fn new(cartridge: Vec<u8>) -> Self {
-        Self { data: cartridge }
+    pub fn new(content: Vec<u8>) -> Self {
+        Self { data: content }
     }
+}
+
+impl Cartridge for NoMBC {
 
     /// Returns the `u8` value at *address*.  
     fn read8(&self, address: u16) -> u8 {
@@ -12,7 +20,7 @@ impl Cartridge for NoMCB {
     }
 
     /// Writes the u8 *value* at *address*. 
-    fn write8(&self, address: u16, value: u8) {
+    fn write8(&mut self, address: u16, value: u8) {
         self.data[address as usize] = value
     }
 }

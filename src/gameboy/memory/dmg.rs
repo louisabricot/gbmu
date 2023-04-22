@@ -3,6 +3,7 @@ use super::timer::Timer;
 use crate::gameboy::Memory;
 use crate::gameboy::Cartridge;
 
+const CARTRIDGE_TYPE: u16 = 0x147;
 //Read-Only Memory from cartridge
 const ROM0_START: u16 = 0x0000;
 const ROM0_END: u16 = 0x8000;
@@ -53,9 +54,9 @@ pub struct DMG {
 }
 
 impl DMG {
-    pub fn new(cartridge: impl Cartridge) -> Self {
+    pub fn new(content: Vec<u8>) -> Self {
         Self {
-            cartridge: Box::new(cartridge),
+            cartridge: crate::gameboy::peripherals::cartridge::make_cartridge(content),
             eram: vec![0; 8 * KIB_IN_BYTE as usize],
             wram: vec![0; 8 * KIB_IN_BYTE as usize],
             interrupts: Interrupts::empty(),
