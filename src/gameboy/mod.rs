@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use self::cpu::Cpu;
 use self::memory::Memory;
 use self::memory::dmg::DMG;
@@ -26,7 +25,7 @@ const NINTENDO_LOGO: [u8; NINTENDO_LOGO_SIZE as usize] = [
 
 /// 
 pub struct GameBoy {
-    cpu: Rc<Cpu>,
+    cpu: Cpu,
     speed: SpeedMode,
 }
 
@@ -45,7 +44,7 @@ pub enum Model {
 impl GameBoy {
     pub fn new() -> Self {
         Self {
-            cpu: Rc::new(Cpu::new()),
+            cpu: Cpu::new(),
             speed: SpeedMode::Normal,
         }
     }
@@ -54,14 +53,17 @@ impl GameBoy {
         self.cpu.memory = match content[CARTRIDGE_CGB_FLAG as usize] {
             //TODO: trouver les valeurs de CGB flag (0x80, 0xc0)
             //Model::CGB => Some(Box::new( CGB { cartridge })),
-            _ => Some(Box::new( DMG::new( content ) )),
+           0x00 => Some(Box::new( DMG::new( content ) )),
+           _ => todo!(),
         };
     }
 
     pub fn run(&mut self) {
         match self.cpu.memory {
-            Some(memory) => loop { self.cpu.step() },
+            Some(_) => loop { self.cpu.step() },
             None => println!("Missing cartridge"),
         }
     }
 }
+
+

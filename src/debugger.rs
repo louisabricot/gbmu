@@ -3,19 +3,9 @@
 //! Provides an interactive disassembler, to display instructions and CPU registers.   
 
 /// `Debugger` takes a reference to the CPU.  
-pub struct Debugger {
-    cpu: Rc<Cpu>,
-}
 
-impl Debugger {
+impl Debugger for Cpu {
 
-    /// Creates a Debugger with a reference to the CPU.  
-    pub fn new(cpu: &cpu) -> Self {
-        Self {
-            cpu: Rc::clone(cpu),
-        }
-    }
-    
     /// Triggers a fetch-decode-execute cycle. 
     /// See [CPU::step()]
     pub fn step(&mut self) {

@@ -17,6 +17,7 @@ pub trait Cartridge {
 }
 
 pub fn make_cartridge(content: Vec<u8>) -> Box< dyn Cartridge> {
+    println!("cartridge type is {}", content[CARTRIDGE_TYPE as usize]);
     match content[CARTRIDGE_TYPE as usize] {
         0x00 => Box::new( NoMBC::new(content)),
         0x01 => Box::new( MBC1::new(content)),

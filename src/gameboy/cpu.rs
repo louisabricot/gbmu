@@ -1,7 +1,6 @@
 //! CPU routine and instructions.
 //!
 //! Implementation of the GameBoy's CPU, its registers and instructions.   
-
 use self::registers::flags::Flags;
 use self::registers::{Register16, Registers};
 use super::memory::Memory;
@@ -30,14 +29,6 @@ pub struct Cpu {
 
 /// CPU states
 pub enum State {
-    /// Describes the default state during which the boot ROM is mapped to the
-    /// `0x0000 - 0x00FF` area, over the cartridge. When the system initializes
-    /// or resets, the CPU starts execution from `0x0000`, it executes the boot
-    /// ROM.  
-    /// In this state, all reads from `0x0000-0x00FF` are handled by the boot ROM
-    /// and all writes to this area are ignored.  
-    Booting,
-
     Running,
 
     Halt,
@@ -53,7 +44,7 @@ impl Cpu {
     pub fn new() -> Self {
         Self {
             registers: Registers::new(),
-            state: State::Booting,
+            state: State::Running,
             memory: None,
         }
     }
@@ -66,7 +57,7 @@ impl Cpu {
     /// Reads from the 8-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 1.  
     fn read_imm8(&mut self) -> u8 {
-        let imm8 = self.memory.unwrap().read8(self.registers.pc);
+        let imm8 = self.memory.as_mut().unwrap().read8(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
         imm8
     }
@@ -74,7 +65,7 @@ impl Cpu {
     /// Reads from the 16-bit immediate value from `Program Counter`.  
     /// Increments the `Program Counter` by 2.  
     fn read_imm16(&mut self) -> u16 {
-        let imm16 = self.memory.unwrap().read16(self.registers.pc);
+        let imm16 = self.memory.as_mut().unwrap().read16(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(2);
         imm16
     }
@@ -108,19 +99,20 @@ impl Cpu {
             }
             State::Interrupt => {
                 // Reset IME flag to prohibit all other interrupts
-                self.memory.unwrap().get_interrupts().set_ime(false);
+                self.memory.as_mut().unwrap().set_ime(false);
 
-                let interrupt = self.memory.unwrap().interrupts.get_highest_priority();
+                let interrupt = self.memory.as_mut().unwrap().get_interrupt();
                
                 match interrupt {
-                  Some(i) => {
-                    let address = self.memory.unwrap().interrupts.get_address(i);
+                  Some(interrupt) => {
+                    let address =
+                    self.memory.as_mut().unwrap().get_interrupt_address(interrupt);
                     
                     self.call_u16(Condition::Always, self.registers.pc,
                     address);
                     
                     // Resets the flag and request handled
-                    self.memory.unwrap().interrupts.remove(i);
+                    self.memory.as_mut().unwrap().remove_interrupt(interrupt);
                   },
                   None => println!("Interrupt state was triggered but no
                   interrupt were found, is this even possible?"),
@@ -222,7 +214,7 @@ impl Cpu {
             Operand8::L => self.registers.l = data,
             Operand8::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.unwrap().write8(address, data);
+                self.memory.as_mut().unwrap().write8(address, data);
             }
             _ => panic!("Not a valid Operand8 for load_u8()"),
         }
@@ -261,7 +253,7 @@ impl Cpu {
             Operand16::SP => self.registers.sp = data,
             Operand16::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.unwrap().write16(address, data);
+                self.memory.as_mut().unwrap().write16(address, data);
             }
             _ => panic!("Not a valid Operand16 for load16()"),
         }
@@ -275,7 +267,7 @@ impl Cpu {
         let value = self.registers.read16(Registers::get_register16(source));
 
         self.registers.sp = self.registers.sp.wrapping_sub(1);
-        self.memory.unwrap().write16(self.registers.sp, value);
+        self.memory.as_mut().unwrap().write16(self.registers.sp, value);
         self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
 
@@ -284,7 +276,7 @@ impl Cpu {
     /// If `Operand16` is not a 16-bit register (`AF`, `BC`, `DE`, or `HL`), the function
     /// `Registers::get_register16()` panics.
     fn pop(&mut self, target: Operand16) {
-        let value = self.memory.unwrap().read16(self.registers.sp);
+        let value = self.memory.as_mut().unwrap().read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
 
         self.registers
@@ -890,13 +882,13 @@ impl Cpu {
 
     /// Disables interrupts
     fn di(&mut self) {
-        self.memory.unwrap().interrupts.set_ime(false);
+        self.memory.as_mut().unwrap().set_ime(false);
         //TODO: cancel any scheduled effects of the EI Instruction if any
     }
 
     /// Enables interrupts
     fn ei(&mut self) {
-        self.memory.unwrap().interrupts.set_ime(true);
+        self.memory.as_mut().unwrap().set_ime(true);
         //TODO: schedule interrupt handling to be enabled after the next machine
         //cycle
     }
@@ -935,7 +927,7 @@ impl Cpu {
     fn call_u16(&mut self, condition: Condition, saved: u16, address: u16) {
         if self.registers.f.check_condition(condition) {
             self.registers.sp = self.registers.sp.wrapping_sub(2);
-            self.memory.unwrap().write16(self.registers.sp, saved);
+            self.memory.as_mut().unwrap().write16(self.registers.sp, saved);
             self.registers.pc = address;
         }
     }
@@ -944,7 +936,7 @@ impl Cpu {
     /// onto `Program Counter`.  
     /// `Flag Register` is not updated.  
     fn ret(&mut self, condition: Condition) {
-        let address = self.memory.unwrap().read16(self.registers.sp);
+        let address = self.memory.as_mut().unwrap().read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
         if self.registers.f.check_condition(condition) {
             self.registers.pc = address;
@@ -954,17 +946,17 @@ impl Cpu {
     /// Pops the 16-bit value on the top of memory stack and loads it onto `Program Counter`.  
     /// Enables the Master Interrupt flag.  
     fn reti(&mut self) {
-        let address = self.memory.unwrap().read16(self.registers.sp);
+        let address = self.memory.as_mut().unwrap().read16(self.registers.sp);
         self.registers.sp = self.registers.sp.wrapping_add(2);
         self.registers.pc = address;
-        self.memory.unwrap().interrupts.set_ime(true);
+        self.memory.as_mut().unwrap().set_ime(true);
     }
 
     /// Loads the `Program Counter` into the memory stack and loads the page0 memory address onto
     /// `Program Counter`.
     fn rst(&mut self, address: Page0) {
         self.registers.sp = self.registers.sp.wrapping_sub(2);
-        self.memory.unwrap().write16(self.registers.sp, self.registers.pc);
+        self.memory.as_mut().unwrap().write16(self.registers.sp, self.registers.pc);
         self.registers.pc = address as u16;
     }
 
@@ -1002,7 +994,7 @@ impl Cpu {
             Operand8::Imm8 => self.read_imm8(),
             Operand8::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.unwrap().read8(address)
+                self.memory.as_mut().unwrap().read8(address)
             }
         }
     }
@@ -1025,21 +1017,21 @@ impl Cpu {
             Operand16::Imm8 => self.read_imm8() as u16,
             Operand16::Addr(at) => {
                 let address = self.get_address(at);
-                self.memory.unwrap().read16(address)
+                self.memory.as_mut().unwrap().read16(address)
             }
         }
     }
 
-    fn format_instruction(&self, imm: Imm, mnemonic: &str, address: u16) -> (String, u16) {
+    fn format_instruction(&mut self, imm: Imm, mnemonic: &str, address: u16) -> (String, u16) {
         let (value, size) = match imm {
-            Imm::Eight => (format!("{:#04x}", self.memory.unwrap().read8(address)), 1),
-            Imm::Sixteen => (format!("{:#08x}", self.memory.unwrap().read16(address)), 2),
+            Imm::Eight => (format!("{:#04x}", self.memory.as_mut().unwrap().read8(address)), 1),
+            Imm::Sixteen => (format!("{:#08x}", self.memory.as_mut().unwrap().read16(address)), 2),
         };
 
         (mnemonic.replace("imm", &value), size)
     }
 
-    pub fn disassemble(&self, lines: u16, mut address: u16) -> Vec<String> {
+    pub fn disassemble(&mut self, lines: u16, mut address: u16) -> Vec<String> {
         let mut mnemonics = Vec::new();
 
         for _i in 0..lines {

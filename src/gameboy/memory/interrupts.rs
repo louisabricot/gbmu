@@ -122,7 +122,7 @@ impl Interrupts {
     /// | Joypad goes low    |     5    |
 
     /// Returns the triggered interrupt with the highest priority.  
-    pub fn get_highest_priority(&self) -> Option<u8> {
+    pub fn get_interrupt(&self) -> Option<u8> {
         // List of interrupts sorted by order of priority  
         const INTERRUPTS_BY_PRIORITY: [u8; 5] = [Interrupts::JOYPAD, Interrupts::SERIAL,
         Interrupts::TIMER, Interrupts::LCDC, Interrupts::VBLANK];

@@ -2,11 +2,12 @@ use super::interrupts::Interrupts;
 use super::timer::Timer;
 use crate::gameboy::Memory;
 use crate::gameboy::Cartridge;
+use crate::gameboy::peripherals::cartridge::make_cartridge;
 
 const CARTRIDGE_TYPE: u16 = 0x147;
 //Read-Only Memory from cartridge
 const ROM0_START: u16 = 0x0000;
-const ROM0_END: u16 = 0x8000;
+const ROM0_END: u16 = 0x7FFF;
 
 // Character data
 const BANK0_START: u16 = 0x8000;
@@ -67,14 +68,26 @@ impl DMG {
 }
 impl Memory for DMG {
 
-    fn get_interrupts(&mut self) -> Interrupts {
-        self.interrupts
+    fn set_ime(&mut self, set: bool) {
+        self.interrupts.set_ime(set)
+    }
+
+    fn get_interrupt(&mut self) -> Option<u8> {
+        self.interrupts.get_interrupt()
+    }
+
+    fn get_interrupt_address(&self, interrupt: u8) -> u16 {
+        self.interrupts.get_address(interrupt)
+    }
+
+    fn remove_interrupt(&mut self, interrupt: u8) {
+        self.interrupts.remove(interrupt);
     }
 
     /// Maps the address to the correct memory area
     fn read8(&self, address: u16) -> u8 {
         match address {
-            ROM0_START..=ROM0_END => self.eram[address as usize],
+            ROM0_START..=ROM0_END => self.cartridge.read8(address),
             BANK0_START..=BANK0_END => {
                 todo!()
             },

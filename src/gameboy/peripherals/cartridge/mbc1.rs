@@ -12,24 +12,28 @@ pub struct MBC1 {
     /// Selects the bank to access to in the `0x4000-0x7FFF` memory area. 
     ///
     bank1: u8,
+
+    content: Vec<u8>,
 }
 
 
 impl MBC1 {
     pub fn new(content: Vec<u8>) -> Self {
-        todo!()
+        Self {
+            gate: 0,
+            bank1: 0,
+            content: content,
+        }
     }
 }
 
 impl Cartridge for MBC1 {
 
     fn read8(&self, address: u16) -> u8 {
-        todo!()
+        self.content[address as usize]
     }
 
     fn write8(&mut self, address: u16, value: u8) {
-        todo!();
+        self.content[address as usize] = value;
     }
 }
-
-
