@@ -1060,6 +1060,8 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::gameboy::memory::dmg::DMG;
+
     #[test]
     fn test_get_operand8() {
         let mut cpu = Cpu {
@@ -1076,14 +1078,14 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(cpu.get_operand8(Operand8::A), cpu.registers.a);
         assert_eq!(cpu.get_operand8(Operand8::E), cpu.registers.e);
-        assert_eq!(cpu.get_operand8(Operand8::Imm8), cpu.memory.read8(0));
+        assert_eq!(cpu.get_operand8(Operand8::Imm8), cpu.memory.unwrap().read8(0));
         assert_eq!(
             cpu.get_operand8(Operand8::Addr(At::HL)),
-            cpu.memory.read8(cpu.registers.l as u16)
+            cpu.memory.unwrap().read8(cpu.registers.l as u16)
         );
     }
 
@@ -1103,7 +1105,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(
             cpu.get_operand16(Operand16::AF),
@@ -1116,11 +1118,11 @@ mod tests {
         assert_eq!(cpu.get_operand16(Operand16::Imm8), 10);
         assert_eq!(
             cpu.get_operand16(Operand16::Imm16),
-            cpu.memory.read16(cpu.registers.pc - 2)
+            cpu.memory.unwrap().read16(cpu.registers.pc - 2)
         );
         assert_eq!(
             cpu.get_operand16(Operand16::Addr(At::HL)),
-            cpu.memory.read16(cpu.registers.l as u16)
+            cpu.memory.unwrap().read16(cpu.registers.l as u16)
         );
     }
 
@@ -1140,7 +1142,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         assert_eq!(
             cpu.get_address(At::BC),
@@ -1149,9 +1151,9 @@ mod tests {
         assert_eq!(cpu.get_address(At::C), cpu.registers.c as u16 | 0xFF00);
         assert_eq!(
             cpu.get_address(At::Imm8),
-            0xFF00 | cpu.memory.read8(0) as u16
+            0xFF00 | cpu.memory.unwrap().read8(0) as u16
         );
-        assert_eq!(cpu.get_address(At::Imm16), cpu.memory.read16(1));
+        assert_eq!(cpu.get_address(At::Imm16), cpu.memory.unwrap().read16(1));
     }
 
     #[test]
@@ -1170,18 +1172,18 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: DMG::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.pop(Operand16::BC);
-        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(0));
+        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.unwrap().read16(0));
         cpu.pop(Operand16::HL);
-        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(2));
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.unwrap().read16(2));
         cpu.pop(Operand16::DE);
-        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(4));
+        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.unwrap().read16(4));
         cpu.pop(Operand16::AF);
         assert_eq!(
             cpu.registers.read16(Register16::AF),
-            cpu.memory.read16(6) & 0xFFF0,
+            cpu.memory.unwrap().read16(6) & 0xFFF0,
         );
     }
 
@@ -1202,7 +1204,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: DMG::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.pop(Operand16::SP);
     }
@@ -1223,16 +1225,16 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.push(Operand16::BC);
-        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.read16(10));
+        assert_eq!(cpu.registers.read16(Register16::BC), cpu.memory.unwrap().read16(10));
         cpu.push(Operand16::HL);
-        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(8));
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.unwrap().read16(8));
         cpu.push(Operand16::DE);
-        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.read16(6));
+        assert_eq!(cpu.registers.read16(Register16::DE), cpu.memory.unwrap().read16(6));
         cpu.push(Operand16::AF);
-        assert_eq!(cpu.registers.read16(Register16::AF), cpu.memory.read16(4));
+        assert_eq!(cpu.registers.read16(Register16::AF), cpu.memory.unwrap().read16(4));
     }
     #[test]
     #[should_panic(expected = "Not a pair of 8-bit registers")]
@@ -1251,7 +1253,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
+            memory: DMG::new(vec![0, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43]),
         };
         cpu.push(Operand16::SP);
     }
@@ -1272,19 +1274,19 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.load16(Operand16::BC, Operand16::SP);
         assert_eq!(cpu.registers.read16(Register16::BC), cpu.registers.sp);
 
         cpu.load16(Operand16::HL, Operand16::Imm16);
-        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.read16(0));
+        assert_eq!(cpu.registers.read16(Register16::HL), cpu.memory.unwrap().read16(0));
 
         cpu.load16(Operand16::DE, Operand16::Imm8);
         assert_eq!(
             cpu.registers.read16(Register16::DE),
-            cpu.memory.read8(2) as u16
+            cpu.memory.unwrap().read8(2) as u16
         );
     }
 
@@ -1305,7 +1307,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.load16(Operand16::AF, Operand16::AF);
     }
@@ -1326,19 +1328,19 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        cpu.load_u8(Operand8::L, cpu.memory.read8(0));
+        cpu.load_u8(Operand8::L, cpu.memory.unwrap().read8(0));
         assert_eq!(cpu.registers.l, 10);
 
-        cpu.load_u8(Operand8::A, cpu.memory.read8(1));
+        cpu.load_u8(Operand8::A, cpu.memory.unwrap().read8(1));
         assert_eq!(cpu.registers.a, 255);
 
         cpu.load_u8(Operand8::E, cpu.registers.l);
         assert_eq!(cpu.registers.e, cpu.registers.l);
 
-        cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.read8(4));
-        assert_eq!(cpu.memory.read8(3), 239);
+        cpu.load_u8(Operand8::Addr(At::HL), cpu.memory.unwrap().read8(4));
+        assert_eq!(cpu.memory.unwrap().read8(3), 239);
     }
 
     #[test]
@@ -1358,9 +1360,9 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
-        cpu.load_u8(Operand8::Imm8, cpu.memory.read8(0));
+        cpu.load_u8(Operand8::Imm8, cpu.memory.unwrap().read8(0));
     }
 
     #[test]
@@ -1379,7 +1381,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.dec8(Operand8::A);
@@ -1397,7 +1399,7 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.dec8(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read8(3), 238);
+        assert_eq!(cpu.memory.unwrap().read8(3), 238);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -1427,7 +1429,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.inc8(Operand8::A);
@@ -1445,7 +1447,7 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.inc8(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read8(3), 240);
+        assert_eq!(cpu.memory.unwrap().read8(3), 240);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(cpu.registers.f.contains(Flags::H));
@@ -1475,7 +1477,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.cp(Operand8::A);
@@ -1523,7 +1525,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.or(Operand8::A);
@@ -1563,7 +1565,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.xor(Operand8::B);
@@ -1604,7 +1606,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.and(Operand8::H);
@@ -1645,7 +1647,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert_eq!(cpu.sub_u8(0xff), 11);
@@ -1688,7 +1690,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.sbc(Operand8::D);
@@ -1735,7 +1737,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.add_u8_to_a(2);
@@ -1777,7 +1779,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.add8(Operand8::B);
@@ -1818,7 +1820,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.adc(Operand8::B);
@@ -1859,7 +1861,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.cpl();
@@ -1901,7 +1903,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -1939,7 +1941,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![10, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -1977,7 +1979,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.load_hl();
@@ -2004,7 +2006,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rlca();
@@ -2031,7 +2033,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rla();
@@ -2058,7 +2060,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rrca();
@@ -2085,7 +2087,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 239, 94, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rr(Operand8::A);
@@ -2112,7 +2114,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rlc(Operand8::B);
@@ -2123,7 +2125,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.rlc(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x00);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x00);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2146,7 +2148,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 17, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 17, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rl(Operand8::B);
@@ -2157,7 +2159,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.rl(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x22);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x22);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2180,7 +2182,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rrc(Operand8::B);
@@ -2191,7 +2193,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.rrc(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x00);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x00);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2214,7 +2216,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 138, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 138, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rr(Operand8::A);
@@ -2225,7 +2227,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.rr(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x45);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x45);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2248,7 +2250,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.sla(Operand8::D);
@@ -2259,7 +2261,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.sla(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0xFE);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0xFE);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2282,7 +2284,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 1, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 1, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.sra(Operand8::D);
@@ -2293,7 +2295,7 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.sra(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x00);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x00);
         assert!(cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2316,7 +2318,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 255, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.srl(Operand8::A);
@@ -2327,7 +2329,7 @@ mod tests {
         assert!(cpu.registers.f.contains(Flags::C));
 
         cpu.srl(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x7F);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x7F);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2349,7 +2351,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.swap(Operand8::A);
@@ -2360,7 +2362,7 @@ mod tests {
         assert!(!cpu.registers.f.contains(Flags::C));
 
         cpu.swap(Operand8::Addr(At::HL));
-        assert_eq!(cpu.memory.read16(3), 0x0F);
+        assert_eq!(cpu.memory.unwrap().read16(3), 0x0F);
         assert!(!cpu.registers.f.contains(Flags::Z));
         assert!(!cpu.registers.f.contains(Flags::N));
         assert!(!cpu.registers.f.contains(Flags::H));
@@ -2383,7 +2385,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.bit(Bit::Seven, Operand8::A);
@@ -2417,7 +2419,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.set(Bit::Two, Operand8::A);
@@ -2451,7 +2453,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.res(Bit::Seven, Operand8::A);
@@ -2485,7 +2487,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -2522,7 +2524,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         assert!(!cpu.registers.f.contains(Flags::Z));
@@ -2559,7 +2561,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 255, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.jp(Condition::Always, Operand16::HL);
@@ -2593,7 +2595,7 @@ mod tests {
                 pc: 0,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 55, 147, 0xF0, 2, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 55, 147, 0xF0, 2, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.jr(Condition::Always);
@@ -2626,12 +2628,12 @@ mod tests {
                 pc: 0x800,
             },
             state: State::Running,
-            memory: Memory::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![2, 55, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.call(Condition::Always, Operand16::DE);
         assert_eq!(cpu.registers.pc, 0x4);
         assert_eq!(cpu.registers.sp, 0x1);
-        assert_eq!(cpu.memory.read16(cpu.registers.sp), 0x803);
+        assert_eq!(cpu.memory.unwrap().read16(cpu.registers.sp), 0x803);
     }
 
     #[test]
@@ -2650,7 +2652,7 @@ mod tests {
                 pc: 0x0,
             },
             state: State::Running,
-            memory: Memory::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
         cpu.ret(Condition::Always);
         //assert_eq!(cpu.registers.pc, 0x03);
@@ -2673,7 +2675,7 @@ mod tests {
                 pc: 0x0,
             },
             state: State::Running,
-            memory: Memory::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
+            memory: DMG::new(vec![5, 0, 147, 0xF0, 0, 38, 23, 3, 34, 213, 99, 43, 13]),
         };
 
         cpu.rst(Page0::Byte1);

@@ -2,17 +2,17 @@ use super::interrupts::Interrupts;
 use super::timer::Timer;
 use crate::gameboy::Memory;
 use crate::gameboy::Cartridge;
-use crate::gameboy::peripherals::cartridge::make_cartridge;
+
 
 const CARTRIDGE_TYPE: u16 = 0x147;
+
 //Read-Only Memory from cartridge
 const ROM0_START: u16 = 0x0000;
 const ROM0_END: u16 = 0x7FFF;
 
 // Character data
-const BANK0_START: u16 = 0x8000;
-const BANK0_END: u16 = 0x9FFF;
-const BANK0_SIZE: u64 = 8 * KIB_IN_BYTE;
+const VRAM_START: u16 = 0x8000;
+const VRAM_END: u16 = 0x9FFF;
 
 // External Expansion Working RAM
 const ERAM_START: u16 = 0xA000;
@@ -50,6 +50,7 @@ pub struct DMG {
     pub cartridge: Box<dyn Cartridge>,
     pub eram: Vec<u8>,
     pub wram: Vec<u8>,
+    pub oam: OAM,
     pub interrupts: Interrupts,
     pub timer: Timer,
 }
@@ -57,7 +58,7 @@ pub struct DMG {
 impl DMG {
     pub fn new(content: Vec<u8>) -> Self {
         Self {
-            cartridge: crate::gameboy::peripherals::cartridge::make_cartridge(content),
+            cartridge: make_cartridge(content),
             eram: vec![0; 8 * KIB_IN_BYTE as usize],
             wram: vec![0; 8 * KIB_IN_BYTE as usize],
             interrupts: Interrupts::empty(),
@@ -88,21 +89,19 @@ impl Memory for DMG {
     fn read8(&self, address: u16) -> u8 {
         match address {
             ROM0_START..=ROM0_END => self.cartridge.read8(address),
-            BANK0_START..=BANK0_END => {
+            VRAM_START..=VRAM_END => {
+                //0x9800 - 0x9BFF -> background tile map
+                //0x9C00 - 0x9FFF -> window tile map
+                // Each tile map contains the 1-byte indexes of the tiles to be
+                // displayed. 
+                // Tiles are obtained from the Tile Data Table using either of
+                // the two addressing modes, which can be selected via the LCDC
+                // register 
                 todo!()
             },
-            ERAM_START..=ERAM_END => {
-              //TODO: if cartridge has extra RAM, maps this extra RAM here
-              self.eram[(address - ERAM_START) as usize]
-            },
-            WRAM_START..=WRAM_END => {
-              //TODO: free ram for the game to use
-              self.wram[(address - WRAM_START) as usize]
-            },
-            ECHO_RAM_START..=ECHO_RAM_END => {
-              //Reads to work ram instead
-              return self.read8(address - 0x2000);
-            },
+            ERAM_START..=ERAM_END => self.eram[(address - ERAM_START) as usize],
+            WRAM_START..=WRAM_END => self.wram[(address - WRAM_START) as usize],
+            ECHO_RAM_START..=ECHO_RAM_END => self.read8(address - 0x2000),
             OAM_START..=OAM_END => {
               todo!()
             },
